@@ -19,7 +19,7 @@ const mbtiles = path.join(userData, 'test-area.mbtiles');
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 const db = new DatabaseSync(mbtiles);
 db.exec('CREATE TABLE metadata (name TEXT, value TEXT); CREATE TABLE tiles (zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER, tile_data BLOB);');
-for (const [name, value] of [['name', 'Ghost test area'], ['format', 'png'], ['attribution', 'Test tiles']]) db.prepare('INSERT INTO metadata VALUES (?, ?)').run(name, value);
+for (const [name, value] of [['name', 'VeilX test area'], ['format', 'png'], ['attribution', 'Test tiles']]) db.prepare('INSERT INTO metadata VALUES (?, ?)').run(name, value);
 const insert = db.prepare('INSERT INTO tiles VALUES (?, ?, ?, ?)');
 for (let z = 0; z <= 3; z++) for (let x = 0; x < 2 ** z; x++) for (let y = 0; y < 2 ** z; y++) insert.run(z, x, y, png);
 db.close();
@@ -46,7 +46,7 @@ try {
   const traversal = await page.evaluate(() => fetch('ghost://app/tiles/../settings.json').then(r => r.status, () => 'blocked'));
   assert.notEqual(traversal, 200);
   await page.evaluate(() => document.querySelector('#settings-button').click());
-  assert.match(await page.locator('#tile-status').textContent(), /Offline MBTiles: Ghost test area · zoom 0–3/);
+  assert.match(await page.locator('#tile-status').textContent(), /Offline MBTiles: VeilX test area · zoom 0–3/);
   console.log(`PASS: ${sources.length} tile image(s) drawn from the local MBTiles file with the OpenStreetMap tile server blocked; out-of-range tiles refused.`);
 } finally {
   await application.close();

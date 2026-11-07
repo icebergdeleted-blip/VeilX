@@ -1,7 +1,7 @@
 {
-  "name": "Ghost",
-  "short_name": "Ghost",
-  "description": "Set or restore your phone's location through Ghost on your computer.",
+  "name": "VeilX",
+  "short_name": "VeilX",
+  "description": "Set or restore your phone's location through VeilX on your computer.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

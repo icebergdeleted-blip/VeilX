@@ -8,7 +8,7 @@ const STATUSES = new Set(['starting', 'running', 'paused', 'completed']);
 
 /**
  * Route geometry and progress, kept beside settings.json so a route can be resumed
- * manually after Ghost restarts. This file never decides anything about a phone.
+ * manually after VeilX restarts. This file never decides anything about a phone.
  * The settings journal's session record stays the safety record. A route is restored
  * only when it belongs to that record's phone, and it always comes back paused.
  */

@@ -4,7 +4,7 @@ const label = connection => connection === 'remote' ? 'remote' : connection === 
 
 /**
  * Desktop alerts for a live location losing (and regaining) its phone connection.
- * Honest wording: while disconnected Ghost cannot see the phone, so the text never says
+ * Honest wording: while disconnected VeilX cannot see the phone, so the text never says
  * "restored" or "still spoofed". Normal Restore and quitting never alert.
  */
 export class ConnectionAlerts {
@@ -25,13 +25,13 @@ export class ConnectionAlerts {
         kind: 'lost',
         title: `${phone}: connection lost`,
         body: next.autoReconnect
-          ? `The ${label(next.connection)} connection dropped. Ghost keeps retrying. If it can’t reconnect, the phone returns to its real location within about a minute.`
-          : `The ${label(next.connection)} connection dropped. Reconnect the phone in Ghost, then retry or restore.`,
+          ? `The ${label(next.connection)} connection dropped. VeilX keeps retrying. If it can’t reconnect, the phone returns to its real location within about a minute.`
+          : `The ${label(next.connection)} connection dropped. Reconnect the phone in VeilX, then retry or restore.`,
       };
     }
     if (this.lost === next.deviceId && previous.status !== 'active' && next.status === 'active') {
       this.lost = null;
-      return { kind: 'reconnected', title: `${phone}: reconnected`, body: 'Ghost is sending your location again.' };
+      return { kind: 'reconnected', title: `${phone}: reconnected`, body: 'VeilX is sending your location again.' };
     }
     return null;
   }

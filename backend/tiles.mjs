@@ -47,7 +47,7 @@ export class TileSource {
     try {
       const metadata = Object.fromEntries(db.prepare('SELECT name, value FROM metadata').all().map(row => [row.name, row.value]));
       const format = String(metadata.format || 'png').toLowerCase();
-      if (format === 'pbf' || format === 'mvt') throw new Error('This MBTiles file has vector tiles. Ghost needs raster tiles (PNG, JPEG or WebP).');
+      if (format === 'pbf' || format === 'mvt') throw new Error('This MBTiles file has vector tiles. VeilX needs raster tiles (PNG, JPEG or WebP).');
       if (!RASTER_TYPES[format]) throw new Error(`Unsupported MBTiles tile format: ${format}.`);
       const zooms = db.prepare('SELECT MIN(zoom_level) AS minzoom, MAX(zoom_level) AS maxzoom FROM tiles').get();
       if (zooms?.maxzoom == null) throw new Error('The MBTiles file contains no tiles.');

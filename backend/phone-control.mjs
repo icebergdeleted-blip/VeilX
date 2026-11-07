@@ -113,7 +113,7 @@ export class PhoneControl extends EventEmitter {
       throw new Error(this.error);
     }
     const server = createServer((req, res) => {
-      this.handle(req, res).catch(() => { if (!res.headersSent) this.json(res, 500, { error: 'Ghost could not complete that request.' }); });
+      this.handle(req, res).catch(() => { if (!res.headersSent) this.json(res, 500, { error: 'VeilX could not complete that request.' }); });
     });
     server.requestTimeout = 15_000; server.headersTimeout = 10_000;
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(this.port, host, resolve); })
@@ -272,7 +272,7 @@ export class PhoneControl extends EventEmitter {
     const state = this.controller.snapshot();
     if (state.route && state.session) throw new Error('A route is running. Restore real location on the computer or phone first.');
     const deviceId = state.session?.deviceId || state.devices.find(device => device.state === 'ready')?.id;
-    if (!deviceId) throw new Error('No phone is connected to Ghost on the computer.');
+    if (!deviceId) throw new Error('No phone is connected to VeilX on the computer.');
     await this.controller.applyLocation({ ...point, deviceId });
   }
 }

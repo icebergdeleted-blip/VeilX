@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Phone control page. Talks only to the Ghost computer that served it (same origin).
+// Phone control page. Talks only to the VeilX computer that served it (same origin).
 (() => {
   const $ = id => document.getElementById(id);
   let state = null, map = null, pin = null, spoof = null, chosen = null, sending = false, timer = null, searchNumber = 0;
@@ -53,7 +53,7 @@
     const when = session?.lastRefreshAt ? new Date(session.lastRefreshAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '';
     $('status-text').textContent = session
       ? `${session.label || 'Custom location'} · ${phoneName}${live && when ? ` · ${when}` : ''}`
-      : state.devices.length ? `${phoneName} ready` : 'No phone connected to Ghost';
+      : state.devices.length ? `${phoneName} ready` : 'No phone connected to VeilX';
     if (session && !live && session.message) $('status-text').textContent = session.message;
     $('set').textContent = session ? 'Update location' : 'Set location';
     $('set').disabled = sending || state.busy || !chosen || (!session && !state.devices.length) || Boolean(state.route);
@@ -81,7 +81,7 @@
 
   async function refresh() {
     try { state = await api('/api/state'); showControl(); render(); }
-    catch (error) { if (!$('pair-view').hidden) return; say('Can’t reach Ghost on your computer. Check Tailscale and that the computer is awake.', true); $('pill').textContent = 'Offline'; $('pill').className = 'pill warn'; }
+    catch (error) { if (!$('pair-view').hidden) return; say('Can’t reach VeilX on your computer. Check Tailscale and that the computer is awake.', true); $('pill').textContent = 'Offline'; $('pill').className = 'pill warn'; }
   }
 
   async function command(path, body, done) {

@@ -45,7 +45,7 @@ test('alerts: a live location losing its connection alerts once, and reconnectin
   const lost = alerts.update(session('waiting'));
   assert.equal(lost.kind, 'lost');
   assert.match(lost.title, /Alex’s iPhone: connection lost/);
-  assert.match(lost.body, /remote connection dropped\. Ghost keeps retrying.*real location within about a minute/);
+  assert.match(lost.body, /remote connection dropped\. VeilX keeps retrying.*real location within about a minute/);
   assert.equal(alerts.update(session('reconnecting')), null);
   assert.equal(alerts.update(session('waiting')), null, 'a failed retry does not alert again');
   assert.equal(alerts.update(session('reconnecting')), null);
@@ -56,7 +56,7 @@ test('alerts: a live location losing its connection alerts once, and reconnectin
 test('alerts: no automatic retry is worded honestly; Restore, phone changes and quitting never alert', () => {
   const alerts = new ConnectionAlerts();
   alerts.update(session('active'));
-  assert.match(alerts.update(session('unknown', { autoReconnect: false })).body, /Reconnect the phone in Ghost, then retry or restore/);
+  assert.match(alerts.update(session('unknown', { autoReconnect: false })).body, /Reconnect the phone in VeilX, then retry or restore/);
   const restore = new ConnectionAlerts();
   for (const status of ['active', 'stopping']) assert.equal(restore.update(session(status)), null);
   assert.equal(restore.update({ session: null }), null);

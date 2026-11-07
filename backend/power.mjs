@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// While a phone is being driven, or Ghost is about to reconnect it, the computer
+// While a phone is being driven, or VeilX is about to reconnect it, the computer
 // must not suspend: sleep would stop the location loop mid-session. An unresolved
 // record that needs the user (unknown/error) does not hold the machine awake.
 // Neither does no session at all, which is the state after a successful Restore.

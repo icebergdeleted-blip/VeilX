@@ -41,7 +41,7 @@ const setupGuides = {
     steps: [
       ['Connect and trust', 'Unlock your iPhone, connect it to your Mac with a USB data cable, then tap Trust on the iPhone if prompted.'],
       ['Turn on Developer Mode', 'On iPhone, open Settings → Privacy & Security → Developer Mode. Turn it on, restart, then confirm with your passcode.'],
-      ['Prepare the device tools', 'Keep the Mac online for the first setup. In Ghost, select the iPhone and choose Prepare so Ghost can mount the matching developer support image.'],
+      ['Prepare the device tools', 'Keep the Mac online for the first setup. In VeilX, select the iPhone and choose Prepare so VeilX can mount the matching developer support image.'],
       ['Keep the cable connected', 'Leave the iPhone connected while a location is active. Use Restore real location before unplugging when possible.'],
     ],
   },
@@ -52,7 +52,7 @@ const setupGuides = {
       ['Install Apple Devices', 'Install or update the Apple Devices app from the Microsoft Store. Open it once so Windows can load Apple’s USB services.'],
       ['Connect and trust', 'Unlock your iPhone, connect it with a USB data cable, select it in Apple Devices, then confirm Trust on both the PC and iPhone if prompted.'],
       ['Turn on Developer Mode', 'On iPhone, open Settings → Privacy & Security → Developer Mode. Turn it on, restart, then confirm with your passcode.'],
-      ['Prepare in Ghost', 'Return to Ghost, select the iPhone, and choose Prepare. Keep the PC online during the first preparation.'],
+      ['Prepare in VeilX', 'Return to VeilX, select the iPhone, and choose Prepare. Keep the PC online during the first preparation.'],
     ],
   },
   'mac:android': {
@@ -62,7 +62,7 @@ const setupGuides = {
       ['Unlock Developer options', 'On Android, open Settings → About phone and tap Build number seven times. Enter your screen lock if asked.'],
       ['Enable USB debugging', 'Open Settings → System → Developer options and turn on USB debugging. Menu names can vary by phone maker.'],
       ['Connect and authorize', 'Use a USB data cable, keep the phone unlocked, and accept the Allow USB debugging prompt for this Mac. No Mac USB driver is normally needed.'],
-      ['Prepare the location helper', 'In Ghost, select the phone and choose Prepare. If Android asks for a mock location app, choose Appium Settings.'],
+      ['Prepare the location helper', 'In VeilX, select the phone and choose Prepare. If Android asks for a mock location app, choose Appium Settings.'],
     ],
   },
   'windows:android': {
@@ -72,7 +72,7 @@ const setupGuides = {
       ['Check the USB driver', 'Connect with a USB data cable. If Windows does not detect the phone, install the ADB USB driver from your phone manufacturer.'],
       ['Unlock Developer options', 'On Android, open Settings → About phone and tap Build number seven times. Enter your screen lock if asked.'],
       ['Enable and authorize debugging', 'Turn on USB debugging in Developer options, reconnect the cable, and accept the computer’s RSA authorization prompt.'],
-      ['Prepare the location helper', 'In Ghost, select the phone and choose Prepare. If Android asks for a mock location app, choose Appium Settings.'],
+      ['Prepare the location helper', 'In VeilX, select the phone and choose Prepare. If Android asks for a mock location app, choose Appium Settings.'],
     ],
   },
 };
@@ -101,7 +101,7 @@ let lastWarning = null;
 $('#app').innerHTML = `
   <header class="titlebar">
     <div class="window-inset" aria-hidden="true"></div>
-    <a class="wordmark" href="#" aria-label="Ghost map"><span class="rail-emblem">${icon('map-pin')}</span><span>Ghost</span></a>
+    <a class="wordmark" href="#" aria-label="VeilX map"><span class="rail-emblem">${icon('map-pin')}</span><span>VeilX</span></a>
     <div class="titlebar-right">
       <span class="preview-label" ${isPreview ? '' : 'hidden'}>Preview</span>
       <button id="saved-nav-button" class="toolbar-button" data-view="saved">${icon('bookmark')}<span>Saved</span><span class="toolbar-count" id="saved-dot" hidden></span></button>
@@ -154,7 +154,7 @@ $('#app').innerHTML = `
     </aside>
   </div>
 
-  <dialog id="onboarding-dialog" class="onboarding-dialog" aria-labelledby="onboarding-title"><div class="onboarding-chrome"><span class="onboarding-brand">${icon('map-pin')} Ghost</span><span id="onboarding-progress">1 of 2</span></div><div id="onboarding-content"></div></dialog>
+  <dialog id="onboarding-dialog" class="onboarding-dialog" aria-labelledby="onboarding-title"><div class="onboarding-chrome"><span class="onboarding-brand">${icon('map-pin')} VeilX</span><span id="onboarding-progress">1 of 2</span></div><div id="onboarding-content"></div></dialog>
 
   <dialog id="setup-dialog" class="sheet-dialog" aria-labelledby="setup-title">
     <div class="sheet-heading"><div><span class="eyebrow">Device setup</span><h2 id="setup-title">Setup guide</h2></div><button class="icon-button" data-close="setup-dialog" aria-label="Close setup guide">${icon('x')}</button></div><p id="setup-intro" class="sheet-intro"></p><div id="setup-content"></div>
@@ -162,7 +162,7 @@ $('#app').innerHTML = `
   </dialog>
 
   <dialog id="wifi-dialog" class="sheet-dialog" aria-labelledby="wifi-title">
-    <div class="sheet-heading"><div><span class="eyebrow">Connection</span><h2 id="wifi-title">How Ghost reaches your phone</h2></div><button class="icon-button" data-close="wifi-dialog" aria-label="Close connection settings">${icon('x')}</button></div>
+    <div class="sheet-heading"><div><span class="eyebrow">Connection</span><h2 id="wifi-title">How VeilX reaches your phone</h2></div><button class="icon-button" data-close="wifi-dialog" aria-label="Close connection settings">${icon('x')}</button></div>
     <div class="connection-modes" role="group" aria-label="Connection method">
       <button data-connection="usb"><strong>USB cable</strong><small>Plugged into this computer. Most reliable.</small></button>
       <button data-connection="wifi"><strong>Wi-Fi</strong><small>Phone and computer on the same Wi-Fi.</small></button>
@@ -179,7 +179,7 @@ $('#app').innerHTML = `
       <p class="guide-intro">One-time setup by cable, then no cable while you’re on the same Wi-Fi as this computer.</p>
       <ol class="setup-checklist">
         <li data-step="usb-iphone"><strong>Plug in and select your iPhone</strong><span>Choose <em>USB cable</em> above, unlock the iPhone and tap Trust if asked. Select it in the Phone list.</span></li>
-        <li data-step="paired"><strong>Set up wireless access</strong><span>Ghost turns on Wi-Fi access and pairs this computer with the iPhone. No prompt appears on the phone.</span><button id="enable-iphone-wifi" class="secondary-button compact">Set up wireless access</button></li>
+        <li data-step="paired"><strong>Set up wireless access</strong><span>VeilX turns on Wi-Fi access and pairs this computer with the iPhone. No prompt appears on the phone.</span><button id="enable-iphone-wifi" class="secondary-button compact">Set up wireless access</button></li>
         <li><strong>Join the same Wi-Fi and switch</strong><span>Put both on the same Wi-Fi network, choose <em>Wi-Fi</em> above, wait for the iPhone to appear, then unplug.</span></li>
       </ol>
     </div>
@@ -190,7 +190,7 @@ $('#app').innerHTML = `
       <ol class="setup-checklist">
         <li data-step="usb-iphone"><strong>Plug in and select your iPhone</strong><span>Choose <em>USB cable</em> above and select the iPhone in the Phone list. Install Tailscale on the iPhone and this computer, signed in to the same account.</span></li>
         <li data-step="paired"><strong>Set up remote access</strong><span>One time per computer. It shows on the iPhone under Settings › Developer › Paired Computers, where you can remove it.</span><button id="pair-remote" class="secondary-button compact">Set up remote access</button></li>
-        <li data-step="host"><strong>Enter the iPhone’s Tailscale address</strong><span>Ghost can look it up from Tailscale on this computer. Otherwise copy it from the Tailscale app on the iPhone; it starts with 100.</span>
+        <li data-step="host"><strong>Enter the iPhone’s Tailscale address</strong><span>VeilX can look it up from Tailscale on this computer. Otherwise copy it from the Tailscale app on the iPhone; it starts with 100.</span>
           <div class="inline-form"><button id="find-tailscale" type="button" class="secondary-button compact">Find with Tailscale</button><span class="field-hint">or type it below</span></div>
           <div id="tailscale-results" class="tailscale-results" hidden></div>
           <form id="remote-host-form" class="inline-form"><input id="remote-host" class="text-input" placeholder="100.101.102.103" autocomplete="off" spellcheck="false" aria-label="iPhone Tailscale address" /><button type="submit" class="secondary-button compact">Save</button><button id="clear-remote-host" type="button" class="text-button">Clear</button></form></li>
@@ -225,8 +225,8 @@ $('#app').innerHTML = `
 
     <details class="setup-guide"><summary>Not finding your phone?</summary>
       <ul class="guide-notes">
-        <li>Unlock the phone and keep the screen on while Ghost searches.</li>
-        <li>Allow Ghost and its device tools through firewall and local-network prompts.</li>
+        <li>Unlock the phone and keep the screen on while VeilX searches.</li>
+        <li>Allow VeilX and its device tools through firewall and local-network prompts.</li>
         <li>Guest Wi-Fi, campus networks and some VPNs keep devices apart. Use a home network, your computer’s hotspot, or Remote.</li>
         <li>Restore real location before switching connections or unplugging.</li>
       </ul>
@@ -235,27 +235,27 @@ $('#app').innerHTML = `
   </dialog>
 
   <dialog id="settings-dialog" class="sheet-dialog" aria-labelledby="settings-title">
-    <div class="sheet-heading"><div><span class="eyebrow">Ghost</span><h2 id="settings-title">Settings</h2></div><button class="icon-button" data-close="settings-dialog" aria-label="Close settings">${icon('x')}</button></div>
-    <div class="settings-group"><h3>Device setup</h3><div class="configuration-row"><div><strong id="settings-configuration">No setup selected</strong><small>Ghost uses this to show the right connection steps.</small></div><button id="rerun-onboarding" class="secondary-button compact">Change</button></div></div>
+    <div class="sheet-heading"><div><span class="eyebrow">VeilX</span><h2 id="settings-title">Settings</h2></div><button class="icon-button" data-close="settings-dialog" aria-label="Close settings">${icon('x')}</button></div>
+    <div class="settings-group"><h3>Device setup</h3><div class="configuration-row"><div><strong id="settings-configuration">No setup selected</strong><small>VeilX uses this to show the right connection steps.</small></div><button id="rerun-onboarding" class="secondary-button compact">Change</button></div></div>
     <div class="settings-group" id="phone-control-group"><h3>Phone control</h3>
-      <label class="setting-row"><span><strong>Control Ghost from your phone</strong><small>Open a page on your phone, over Tailscale only, to set or restore locations while away from this computer. Off by default.</small></span><input id="phone-control-toggle" type="checkbox" class="switch" /></label>
+      <label class="setting-row"><span><strong>Control VeilX from your phone</strong><small>Open a page on your phone, over Tailscale only, to set or restore locations while away from this computer. Off by default.</small></span><input id="phone-control-toggle" type="checkbox" class="switch" /></label>
       <div id="phone-control-details" hidden>
         <p class="settings-note">On your phone (with Tailscale on), open:</p>
         <div class="inline-form"><code id="phone-control-url" class="url-box"></code><button id="phone-control-copy" type="button" class="text-button">Copy</button></div>
         <p id="phone-control-ip" class="settings-note"></p>
         <div class="inline-form"><button id="phone-control-pair" type="button" class="secondary-button compact">Pair a phone</button></div>
-        <div id="phone-control-qr-box" class="qr-box" hidden><div id="phone-control-qr" class="qr" role="img" aria-label="QR code that opens Ghost on your phone and pairs it"></div><div><strong>Scan with your iPhone camera</strong><small>It opens Ghost and pairs in one step. Or type this code on the phone:</small><span id="phone-control-code" class="pair-code" aria-live="polite"></span></div></div>
+        <div id="phone-control-qr-box" class="qr-box" hidden><div id="phone-control-qr" class="qr" role="img" aria-label="QR code that opens VeilX on your phone and pairs it"></div><div><strong>Scan with your iPhone camera</strong><small>It opens VeilX and pairs in one step. Or type this code on the phone:</small><span id="phone-control-code" class="pair-code" aria-live="polite"></span></div></div>
         <p id="phone-control-info" class="settings-note"></p>
         <button id="phone-control-revoke" type="button" class="text-button danger-text">Sign out all phones</button>
       </div>
       <p id="phone-control-error" class="settings-note error-text" role="alert"></p>
     </div>
-    <div class="settings-group"><h3>Location sessions</h3><label class="setting-row"><span><strong>Restore on quit</strong><small>Ghost tries to stop location simulation before it closes. Keep the phone connected.</small></span><input id="restore-preference" type="checkbox" class="switch" /></label></div>
+    <div class="settings-group"><h3>Location sessions</h3><label class="setting-row"><span><strong>Restore on quit</strong><small>VeilX tries to stop location simulation before it closes. Keep the phone connected.</small></span><input id="restore-preference" type="checkbox" class="switch" /></label></div>
     <div class="settings-group"><h3>Device tools</h3><div id="runtime-status"></div><button id="install-runtime" class="secondary-button">${icon('download')} Prepare device tools</button><p class="settings-note">First-time preparation may need an internet connection.</p></div>
     <form id="provider-form" class="settings-group"><h3>Place search</h3><label class="field-label" for="provider-url">Photon-compatible endpoint</label><input id="provider-url" class="text-input" type="url" required placeholder="https://photon.komoot.io/api/" /><p class="settings-note">Search runs only when you submit. Plain HTTP is allowed only for a server on this computer or your private network.</p><div class="button-row"><button type="submit" class="secondary-button compact">Save endpoint</button><button id="reset-provider" type="button" class="text-button">Reset</button></div></form>
     <form id="routing-form" class="settings-group"><h3>Road routing</h3><label class="field-label" for="routing-url">OSRM-compatible routing URL</label><input id="routing-url" class="text-input" type="url" required placeholder="https://router.project-osrm.org/" /><p class="settings-note">Used only when you choose Plan road route. For offline planning, run your own OSRM server and enter its address, for example http://localhost:5000/.</p><div class="button-row"><button type="submit" class="secondary-button compact">Save routing URL</button><button id="reset-routing" type="button" class="text-button">Reset</button></div></form>
     <div class="settings-group"><h3>Map tiles</h3><p id="tile-status" class="settings-note" role="status">Online map from OpenStreetMap.</p><div class="button-row wrap"><button id="tiles-online" type="button" class="secondary-button compact">Use online map</button><button id="tiles-mbtiles" type="button" class="secondary-button compact">Choose MBTiles file…</button><button id="tiles-folder" type="button" class="secondary-button compact">Choose tile folder…</button></div><p class="settings-note">Offline maps use raster tiles you prepare yourself (see docs/offline-maps.md). Without tiles, search, pins and coordinate entry still work.</p></div>
-    <div class="settings-footer">Ghost 0.1.7 · Free and open source</div>
+    <div class="settings-footer">VeilX · Based on Ghost by Blueturboguy07 · Free and open source (GPL-3.0-or-later)</div>
   </dialog>
 
   <dialog id="save-dialog" class="small-dialog" aria-labelledby="save-title"><div class="sheet-heading"><div><span class="eyebrow">Saved place</span><h2 id="save-title">Save this place</h2></div><button class="icon-button" data-close="save-dialog" aria-label="Close save place">${icon('x')}</button></div><form id="save-form"><label class="field-label" for="place-name">Name</label><input id="place-name" class="text-input" maxlength="120" required placeholder="Place name" /><input id="place-id" type="hidden" /><p id="save-coordinates" class="settings-note"></p><button class="primary-button" type="submit"><span>Save place</span>${icon('bookmark')}</button></form></dialog>
@@ -316,7 +316,7 @@ function acceptState(next) {
   render();
   if (!selectedPlace && state.session && Number.isFinite(state.session.latitude) && Number.isFinite(state.session.longitude)) selectPlace(state.session);
   if (state.warning && state.warning !== lastWarning) { lastWarning = state.warning; notify(state.warning, true); }
-  // `false` only once saved settings have loaded; `undefined` means Ghost is still starting.
+  // `false` only once saved settings have loaded; `undefined` means VeilX is still starting.
   if (!onboardingShown && state.preferences.onboardingComplete === false) {
     onboardingShown = true;
     requestAnimationFrame(() => openOnboarding());
@@ -407,7 +407,7 @@ function renderActions() {
   const otherSession = state.session && state.session.deviceId !== selectedDeviceId;
   const retry = ['unknown', 'error', 'waiting'].includes(status) && !otherSession;
   const reconnectIOS = Boolean(state.session) && !otherSession && device?.platform === 'ios' && device.state === 'setup-required';
-  // Any connection Ghost is currently using (USB, Wi-Fi or Remote); the backend re-checks the match.
+  // Any connection VeilX is currently using (USB, Wi-Fi or Remote); the backend re-checks the match.
   const canApply = device?.connection === (state.preferences.connection || 'usb') && (device.state === 'ready' || reconnectIOS);
   const label = pendingAction === 'restore' ? 'Stopping…' : status === 'reconnecting' ? 'Reconnecting…' : busy ? 'Working…' : reconnectIOS || (retry && status === 'waiting') ? 'Reconnect & set location' : retry ? 'Retry location' : status === 'active' ? 'Update location' : 'Set location';
   $('#apply-button').disabled = busy || !selectedPlace || !canApply || Boolean(otherSession);
@@ -508,7 +508,7 @@ function renderSession() {
   const refreshCount = Number.isFinite(session?.refreshCount) ? Math.max(0, session.refreshCount) : null;
   const refreshText = hasRefresh ? `<small id="session-refresh" class="session-refresh" aria-live="off"><span>${confirmationLabel}: <time datetime="${esc(refreshDate.toISOString())}">${esc(refreshDate.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }))}</time>${refreshCount === null ? '' : ` · ${commandAck ? 'Updates acknowledged' : 'Refreshes'}: ${refreshCount}`}</span><span>${confirmationScope}</span></small>` : '';
   const recovering = ['waiting', 'unknown', 'error'].includes(session?.status);
-  const recoveryText = recovering ? `<span class="session-recovery">${session.autoReconnect ? 'Ghost will retry this phone automatically. Restore cancels retry.' : 'Reconnect this phone, then retry or restore.'}</span>` : '';
+  const recoveryText = recovering ? `<span class="session-recovery">${session.autoReconnect ? 'VeilX will retry this phone automatically. Restore cancels retry.' : 'Reconnect this phone, then retry or restore.'}</span>` : '';
   const statusIcon = session?.status === 'reconnecting' ? 'refresh-cw' : session ? ['unknown', 'error', 'waiting'].includes(session.status) ? 'help-circle' : 'map-pin' : 'circle';
   setContent('#session-status', `<span class="session-status-icon">${icon(statusIcon, session?.status === 'reconnecting' ? 'spin' : '')}</span><div><strong>${session ? session.status === 'active' && state.route ? ({ running: `Following route · ${routeSpeed()} mph`, paused: state.route.restored ? 'Saved route paused' : 'Route paused', completed: 'Arrived', starting: 'Starting route…' }[state.route.status]) : labels[session.status] || 'Session needs attention' : 'Ready'}</strong><span>${esc(state.route?.message || session?.message || (session ? session.label || 'Keep your phone connected.' : state.devices.some((device) => device.state === 'ready') ? 'Choose a place to begin.' : 'Connect a phone and choose a place.'))}</span>${recoveryText}${refreshText}</div>${session?.status === 'active' ? '<span class="live-tag"><span></span>Active</span>' : ''}`);
 }
@@ -531,7 +531,7 @@ function renderSetup() {
   $('#setup-intro').textContent = guide.intro;
   const runtime = state.runtime?.[setupPlatform];
   const runtimeHelp = runtime?.available === false ? `<div class="setup-runtime"><div><strong>${isPreview ? 'Open the desktop app to connect' : 'Device tools need preparation'}</strong><p>${isPreview ? 'The browser preview cannot discover or control phones.' : 'First-time preparation needs internet access.'}</p></div><button id="setup-install-runtime" class="secondary-button compact" ${(pending || state.busy || isPreview) ? 'disabled' : ''}>${pending ? 'Preparing…' : 'Prepare tools'}</button></div>` : '';
-  setContent('#setup-content', `${runtimeHelp}<ol class="setup-steps">${guide.steps.map(([title, body], index) => `<li><span class="step-number">${index + 1}</span><div><h3>${title}</h3><p>${body}</p></div></li>`).join('')}</ol><p class="compatibility-note">${setupPlatform === 'ios' ? 'Ghost currently targets iOS 17.4 and later. Support still depends on the iOS version and bundled device tools.' : 'Ghost targets Android 8 and later. Some apps can detect or reject simulated locations.'}</p>`);
+  setContent('#setup-content', `${runtimeHelp}<ol class="setup-steps">${guide.steps.map(([title, body], index) => `<li><span class="step-number">${index + 1}</span><div><h3>${title}</h3><p>${body}</p></div></li>`).join('')}</ol><p class="compatibility-note">${setupPlatform === 'ios' ? 'VeilX currently targets iOS 17.4 and later. Support still depends on the iOS version and bundled device tools.' : 'VeilX targets Android 8 and later. Some apps can detect or reject simulated locations.'}</p>`);
   if ($('#setup-install-runtime')) $('#setup-install-runtime').onclick = () => runOperation(() => api.installRuntime(), 'Device tools checked.');
   $('#setup-scan').disabled = pending || state.busy;
   const matching = state.devices.filter((device) => device.platform === setupPlatform && device.state !== 'offline');
@@ -541,7 +541,7 @@ function renderSetup() {
 function renderOnboarding() {
   $('#onboarding-progress').textContent = onboardingStep === 'survey' ? '1 of 2' : '2 of 2';
   if (onboardingStep === 'survey') {
-    setContent('#onboarding-content', `<div class="onboarding-copy"><span class="eyebrow">Welcome to Ghost</span><h1 id="onboarding-title">Let’s set up your devices.</h1><p>Choose your computer and phone. Ghost will show the USB setup for that combination. For wireless setup, choose Connection → Wi-Fi on the map.</p></div><div class="survey-group"><h2>This computer</h2><div class="choice-grid"><button class="choice-card" data-survey-host="mac" aria-pressed="${surveyHost === 'mac'}">${icon('laptop')}<span><strong>Mac</strong><small>macOS</small></span>${icon('check', 'choice-check')}</button><button class="choice-card" data-survey-host="windows" aria-pressed="${surveyHost === 'windows'}">${icon('monitor')}<span><strong>Windows PC</strong><small>Windows 10 or 11</small></span>${icon('check', 'choice-check')}</button></div></div><div class="survey-group"><h2>Your phone</h2><div class="choice-grid"><button class="choice-card" data-survey-phone="ios" aria-pressed="${surveyPhone === 'ios'}">${icon('smartphone')}<span><strong>iPhone</strong><small>iOS 17.4 or later</small></span>${icon('check', 'choice-check')}</button><button class="choice-card" data-survey-phone="android" aria-pressed="${surveyPhone === 'android'}">${icon('smartphone')}<span><strong>Android</strong><small>Android 8 or later</small></span>${icon('check', 'choice-check')}</button></div></div><div class="onboarding-actions"><span>Your choices stay on this computer.</span><button id="onboarding-next" class="primary-button inline" ${!surveyHost || !surveyPhone ? 'disabled' : ''}><span>Continue</span>${icon('arrow-right')}</button></div>`);
+    setContent('#onboarding-content', `<div class="onboarding-copy"><span class="eyebrow">Welcome to VeilX</span><h1 id="onboarding-title">Let’s set up your devices.</h1><p>Choose your computer and phone. VeilX will show the USB setup for that combination. For wireless setup, choose Connection → Wi-Fi on the map.</p></div><div class="survey-group"><h2>This computer</h2><div class="choice-grid"><button class="choice-card" data-survey-host="mac" aria-pressed="${surveyHost === 'mac'}">${icon('laptop')}<span><strong>Mac</strong><small>macOS</small></span>${icon('check', 'choice-check')}</button><button class="choice-card" data-survey-host="windows" aria-pressed="${surveyHost === 'windows'}">${icon('monitor')}<span><strong>Windows PC</strong><small>Windows 10 or 11</small></span>${icon('check', 'choice-check')}</button></div></div><div class="survey-group"><h2>Your phone</h2><div class="choice-grid"><button class="choice-card" data-survey-phone="ios" aria-pressed="${surveyPhone === 'ios'}">${icon('smartphone')}<span><strong>iPhone</strong><small>iOS 17.4 or later</small></span>${icon('check', 'choice-check')}</button><button class="choice-card" data-survey-phone="android" aria-pressed="${surveyPhone === 'android'}">${icon('smartphone')}<span><strong>Android</strong><small>Android 8 or later</small></span>${icon('check', 'choice-check')}</button></div></div><div class="onboarding-actions"><span>Your choices stay on this computer.</span><button id="onboarding-next" class="primary-button inline" ${!surveyHost || !surveyPhone ? 'disabled' : ''}><span>Continue</span>${icon('arrow-right')}</button></div>`);
     document.querySelectorAll('[data-survey-host]').forEach((button) => { button.onclick = () => { surveyHost = button.dataset.surveyHost; renderOnboarding(); paintIcons(); }; });
     document.querySelectorAll('[data-survey-phone]').forEach((button) => { button.onclick = () => { surveyPhone = button.dataset.surveyPhone; renderOnboarding(); paintIcons(); }; });
     $('#onboarding-next').onclick = () => { if (surveyHost && surveyPhone) { onboardingStep = 'guide'; onboardingChecks.clear(); renderOnboarding(); paintIcons(); } };
@@ -722,7 +722,7 @@ $('#phone-control-toggle').onchange = () => phoneControlAction($('#phone-control
 $('#phone-control-pair').onclick = () => phoneControlAction('pair');
 $('#phone-control-revoke').onclick = () => phoneControlAction('revoke', 'All phones were signed out.');
 $('#phone-control-copy').onclick = () => { navigator.clipboard?.writeText(phoneControlStatus.url || '').then(() => notify('Address copied.'), () => {}); };
-if (api.onPhoneControl) api.onPhoneControl(status => { renderPhoneControl(status); notify('A phone was paired with Ghost.'); });
+if (api.onPhoneControl) api.onPhoneControl(status => { renderPhoneControl(status); notify('A phone was paired with VeilX.'); });
 $('#settings-button').onclick = () => {
   if (api.phoneControl && !isPreview) api.phoneControl('status').then(renderPhoneControl, () => {}); $('#provider-url').value = state.preferences.geocoderUrl || 'https://photon.komoot.io/api/'; $('#routing-url').value = state.preferences.routingUrl || 'https://router.project-osrm.org/'; renderTileStatus(); renderRuntime(); paintIcons(); $('#settings-dialog').showModal(); };
 $('#scan-button').onclick = () => runOperation(() => api.scanDevices(), 'Device list refreshed.');
@@ -855,4 +855,4 @@ api.getState().then(async next => {
     const planned = await api.getRoute();
     if (planned) { routePlan = planned; routeStops = planned.waypoints; drawRoute(); renderRoute(); paintIcons(); }
   }
-}).catch((error) => notify(`Ghost could not initialize: ${error.message}`, true));
+}).catch((error) => notify(`VeilX could not initialize: ${error.message}`, true));

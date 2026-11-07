@@ -67,7 +67,7 @@ jobs:
       - name: Upload installer artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: Ghost-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.sha }}
+          name: VeilX-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.sha }}
           if-no-files-found: error
           retention-days: 14
           compression-level: 0

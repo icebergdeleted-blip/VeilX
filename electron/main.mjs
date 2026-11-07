@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, protocol, net, session, dialog, Menu, shel
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
+import { migrateLegacyData } from '../backend/data-migration.mjs';
 import { Store } from '../backend/store.mjs';
 import { Controller } from '../backend/controller.mjs';
 import { Geocoder } from '../backend/geocoder.mjs';
@@ -19,9 +20,14 @@ import { findSelfDnsName } from '../backend/tailscale.mjs';
 const rootPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const devUrl = !app.isPackaged && process.env.GHOST_DEV_URL === 'http://127.0.0.1:5173' ? process.env.GHOST_DEV_URL : null;
 if (!app.isPackaged) app.setPath('userData', process.env.GHOST_TEST_DATA || path.join(rootPath, '.ghost-dev'));
-app.setName('Ghost');
+app.setName('VeilX');
+// VeilX was renamed from Ghost. Copy Ghost's settings and recovery records once, before anything reads them.
+if (app.isPackaged) {
+  try { migrateLegacyData({ from: path.join(app.getPath('appData'), 'Ghost'), to: app.getPath('userData') }); }
+  catch (error) { console.error('Could not copy data from Ghost:', error.message); }
+}
 // Windows shows desktop notifications only for an app with this ID (matches build.appId).
-if (process.platform === 'win32') app.setAppUserModelId('org.ghostlocation.desktop');
+if (process.platform === 'win32') app.setAppUserModelId('io.github.icebergdeleted-blip.veilx');
 protocol.registerSchemesAsPrivileged([{ scheme: 'ghost', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
 let window, controller, poll, phoneControl, quitting = false, quitPending = false;
@@ -47,7 +53,7 @@ const allowedExternal = new Set(['github.com', 'developer.android.com', 'develop
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { window?.show(); window?.focus(); });
-  app.whenReady().then(boot).catch(error => { dialog.showErrorBox('Ghost could not start', error.message); app.exit(1); });
+  app.whenReady().then(boot).catch(error => { dialog.showErrorBox('VeilX could not start', error.message); app.exit(1); });
 }
 
 async function boot() {
@@ -80,13 +86,13 @@ async function boot() {
   const android = new AndroidAdapter({ ...options, ...callbacks });
   controller = new Controller({ adapters: { ios, android }, network: wifiStatus, store: new Store(path.join(app.getPath('userData'), 'settings.json')),
     routeJournal: new RouteJournal(path.join(app.getPath('userData'), 'route.json')) });
-  // Development builds may use another port (e.g. checks running beside your own Ghost); releases always use 7420.
+  // Development builds may use another port (e.g. checks running beside your own VeilX); releases always use 7420.
   const devPort = !app.isPackaged && /^\d{4,5}$/.test(process.env.GHOST_PHONE_CONTROL_PORT || '') ? Number(process.env.GHOST_PHONE_CONTROL_PORT) : undefined;
   phoneControl = new PhoneControl({ controller, dataPath: path.join(app.getPath('userData'), 'phone-control.json'), ...(devPort ? { port: devPort } : {}),
     dnsName: () => findSelfDnsName().catch(() => null),
     search: query => { geocoder.configure(controller.state.preferences.geocoderUrl || 'https://photon.komoot.io/api/'); return geocoder.search(query); } });
   phoneControl.on('paired', () => {
-    showAlert({ kind: 'paired', title: 'Phone paired with Ghost', body: 'A phone can now control locations over Tailscale. Remove access anytime in Settings › Phone control.' });
+    showAlert({ kind: 'paired', title: 'Phone paired with VeilX', body: 'A phone can now control locations over Tailscale. Remove access anytime in Settings › Phone control.' });
     if (window && !window.isDestroyed()) window.webContents.send('ghost:phone-control', phoneControl.status());
   });
   controller.on('state', state => {
@@ -144,7 +150,7 @@ async function boot() {
     },
     installRuntime: () => controller.exclusive(async () => {
       if (controller.state.session) throw new Error('Restore the current phone session first.');
-      if (app.isPackaged) throw new Error('The desktop release includes its device tools. If they are missing, reinstall a complete Ghost build.');
+      if (app.isPackaged) throw new Error('The desktop release includes its device tools. If they are missing, reinstall a complete VeilX build.');
       const result = await run(process.execPath, [path.join(rootPath, 'scripts/prepare-runtime.mjs')], {
         cwd: rootPath, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, timeoutMs: 900000, maxOutputBytes: 8_000_000
       });
@@ -163,23 +169,23 @@ async function boot() {
 
   window = new BrowserWindow({
     width: 1440, height: 940, minWidth: 960, minHeight: 680, backgroundColor: '#f8f9fb', show: false,
-    title: 'Ghost — Your location, on your terms', titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 22 },
+    title: 'VeilX — Your location, on your terms', titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 22 },
     ...(process.platform === 'win32' ? { titleBarOverlay: { color: '#f8f9fb', symbolColor: '#1d1d1f', height: 58 } } : {}),
     webPreferences: { preload: path.join(rootPath, 'electron/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webSecurity: true }
   });
-  window.webContents.setUserAgent(`${window.webContents.getUserAgent()} GhostLocation/${app.getVersion()}`);
+  window.webContents.setUserAgent(`${window.webContents.getUserAgent()} VeilX/${app.getVersion()}`);
   window.webContents.on('will-navigate', event => event.preventDefault());
   window.webContents.setWindowOpenHandler(({ url }) => {
     try { const parsed = new URL(url); if (parsed.protocol === 'https:' && allowedExternal.has(parsed.hostname)) shell.openExternal(parsed.href); } catch {}
     return { action: 'deny' };
   });
   window.webContents.on('render-process-gone', () => {
-    if (controller.state.session) controller.sessionEnded({ deviceId: controller.state.session.deviceId, retry: false, error: 'The interface stopped unexpectedly. Reopen Ghost and retry or restore the phone location.' });
+    if (controller.state.session) controller.sessionEnded({ deviceId: controller.state.session.deviceId, retry: false, error: 'The interface stopped unexpectedly. Reopen VeilX and retry or restore the phone location.' });
   });
   window.once('ready-to-show', () => window.show());
   window.on('close', event => { if (!quitting) { event.preventDefault(); app.quit(); } });
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    ...(process.platform === 'darwin' ? [{ label: 'Ghost', submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { type: 'separator' }, { role: 'quit' }] }] : []),
+    ...(process.platform === 'darwin' ? [{ label: 'VeilX', submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { type: 'separator' }, { role: 'quit' }] }] : []),
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { label: 'View', submenu: [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, ...(!app.isPackaged ? [{ role: 'toggleDevTools' }] : [])] },
     { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'close' }] }
@@ -211,17 +217,17 @@ async function finishQuit() {
   connectionAlerts.suppress(); // Quitting ends sessions on purpose; never alert about it.
   await phoneControl?.stop().catch(() => {});
   if (controller.state.busy) {
-    await dialog.showMessageBox(window, { type: 'info', message: 'A device operation is still running.', detail: 'Wait for it to finish before closing Ghost.', buttons: ['Keep Ghost open'] });
+    await dialog.showMessageBox(window, { type: 'info', message: 'A device operation is still running.', detail: 'Wait for it to finish before closing VeilX.', buttons: ['Keep VeilX open'] });
     return;
   }
   if (controller.state.session && controller.state.preferences.restoreOnQuit) {
     try { await controller.stopLocation(); }
     catch (error) {
-      const answer = await dialog.showMessageBox(window, { type: 'warning', message: 'The phone location has not been restored.', detail: `${error.message}\n\nReconnect your phone to restore it. Quitting now will keep this session marked for recovery.`, buttons: ['Keep Ghost open', 'Quit anyway'], defaultId: 0, cancelId: 0 });
+      const answer = await dialog.showMessageBox(window, { type: 'warning', message: 'The phone location has not been restored.', detail: `${error.message}\n\nReconnect your phone to restore it. Quitting now will keep this session marked for recovery.`, buttons: ['Keep VeilX open', 'Quit anyway'], defaultId: 0, cancelId: 0 });
       if (answer.response !== 1) return;
     }
   }
-  if (controller.state.session) await controller.sessionEnded({ deviceId: controller.state.session.deviceId, retry: false, error: 'Ghost quit without confirming restoration. Reconnect this phone and choose Retry location or Restore.' });
+  if (controller.state.session) await controller.sessionEnded({ deviceId: controller.state.session.deviceId, retry: false, error: 'VeilX quit without confirming restoration. Reconnect this phone and choose Retry location or Restore.' });
   clearInterval(poll);
   wakeLock.release();
   tileSource.close();

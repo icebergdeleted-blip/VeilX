@@ -1,4 +1,4 @@
-"""Ghost iOS bridge: private JSONL stdin/stdout, one explicitly selected USB or Wi-Fi DVT session.
+"""VeilX iOS bridge: private JSONL stdin/stdout, one explicitly selected USB or Wi-Fi DVT session.
 
 No request is acknowledged until the awaited upstream operation completes.
 The DVT set selector expects a device reply; clear is an upstream no-reply selector.
@@ -235,7 +235,7 @@ class Bridge:
             # Cache the existing trusted record for authenticated Bonjour discovery.
             await lockdown.save_pair_record()
             await lockdown.set_enable_wifi_connections(True)
-        return {"enabled": True, "message": "Wi-Fi enabled. Keep both devices on the same network, then choose Wi-Fi in Ghost."}
+        return {"enabled": True, "message": "Wi-Fi enabled. Keep both devices on the same network, then choose Wi-Fi in VeilX."}
 
     async def pair_remote(self, udid):
         """Create this host's RemotePairing record over the trusted USB lockdown (no prompt)."""

@@ -134,7 +134,7 @@ test('signing out all phones revokes existing sessions immediately', async t => 
   assert.equal(f.control.status().phones, 0);
 });
 
-test('no phone connected to Ghost gives a clear error instead of a command', async t => {
+test('no phone connected to VeilX gives a clear error instead of a command', async t => {
   const f = await fixture(t);
   f.controller.state.devices = [];
   await f.call('POST', '/api/pair', { code: f.control.newPairingCode().pairing.code });
@@ -161,7 +161,7 @@ test('the MagicDNS name works alongside the IP; other names are still refused; Q
   assert.equal((await f.call('GET', '/icon.png')).headers['content-type'], 'image/png');
 });
 
-test('search goes through Ghost’s geocoder: paired only, validated, rate-limited, results cleaned', async t => {
+test('search goes through VeilX’s geocoder: paired only, validated, rate-limited, results cleaned', async t => {
   const queries = [];
   const f = await fixture(t, { search: async q => { queries.push(q); return [
     { label: 'Statue of Liberty', latitude: 40.689247, longitude: -74.044502, extra: 'dropped' },
