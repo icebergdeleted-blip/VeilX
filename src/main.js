@@ -237,6 +237,7 @@ $('#app').innerHTML = `
   <dialog id="settings-dialog" class="sheet-dialog" aria-labelledby="settings-title">
     <div class="sheet-heading"><div><span class="eyebrow">VeilX</span><h2 id="settings-title">Settings</h2></div><button class="icon-button" data-close="settings-dialog" aria-label="Close settings">${icon('x')}</button></div>
     <div class="settings-group"><h3>Device setup</h3><div class="configuration-row"><div><strong id="settings-configuration">No setup selected</strong><small>VeilX uses this to show the right connection steps.</small></div><button id="rerun-onboarding" class="secondary-button compact">Change</button></div></div>
+    <div class="settings-group"><h3>Appearance</h3><div class="theme-modes" role="group" aria-label="Appearance"><button type="button" data-theme-choice="system" aria-pressed="true">System</button><button type="button" data-theme-choice="light" aria-pressed="false">Light</button><button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button></div><p class="settings-note">System follows your computer’s light or dark setting.</p></div>
     <div class="settings-group" id="phone-control-group"><h3>Phone control</h3>
       <label class="setting-row"><span><strong>Control VeilX from your phone</strong><small>Open a page on your phone, over Tailscale only, to set or restore locations while away from this computer. Off by default.</small></span><input id="phone-control-toggle" type="checkbox" class="switch" /></label>
       <div id="phone-control-details" hidden>
@@ -521,6 +522,7 @@ function renderRuntime() {
   $('#install-runtime').disabled = pending || state.busy || isPreview;
   setContent('#install-runtime', `${icon(pending ? 'loader-circle' : 'download', pending ? 'spin' : '')} ${pending ? 'Preparing…' : isPreview ? 'Available in the desktop app' : 'Prepare device tools'}`);
   if (document.activeElement !== $('#restore-preference')) $('#restore-preference').checked = state.preferences.restoreOnQuit !== false;
+  applyThemeChoice(state.preferences.theme);
   const selectedGuide = state.preferences.hostPlatform && state.preferences.phonePlatform ? guideFor(state.preferences.hostPlatform, state.preferences.phonePlatform) : null;
   $('#settings-configuration').textContent = selectedGuide?.title || 'No setup selected';
 }
@@ -745,6 +747,16 @@ $('#route-play').onclick = () => runOperation(() => state.route?.status === 'run
 $('#restore-button').onclick = () => runOperation(() => api.stopLocation(), 'Restore command accepted. Phone apps may need a moment to refresh.', 'restore');
 $('#toast-close').onclick = () => { $('#toast').hidden = true; clearTimeout(toastTimer); };
 $('#install-runtime').onclick = () => runOperation(() => api.installRuntime(), 'Device tools checked.');
+// Appearance. The attribute also lets the browser preview switch themes; in the app, Electron
+// follows the same choice for the window and title bar.
+function applyThemeChoice(theme) {
+  const choice = ['light', 'dark'].includes(theme) ? theme : 'system';
+  if (choice === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = choice;
+  for (const button of document.querySelectorAll('[data-theme-choice]')) button.setAttribute('aria-pressed', String(button.dataset.themeChoice === choice));
+}
+for (const button of document.querySelectorAll('[data-theme-choice]')) {
+  button.onclick = () => { applyThemeChoice(button.dataset.themeChoice); runOperation(() => api.updatePreferences({ theme: button.dataset.themeChoice })); };
+}
 $('#restore-preference').onchange = () => runOperation(() => api.updatePreferences({ restoreOnQuit: $('#restore-preference').checked }));
 $('#provider-form').onsubmit = (event) => { event.preventDefault(); const url = $('#provider-url').value.trim(); try { if (!['https:', 'http:'].includes(new URL(url).protocol)) throw new Error(); } catch { notify('Use a valid HTTPS URL for your search provider (HTTP only on this computer or your network).', true); return; } runOperation(() => api.updatePreferences({ geocoderUrl: url }), 'Search endpoint saved.'); };
 $('#reset-provider').onclick = () => { $('#provider-url').value = 'https://photon.komoot.io/api/'; runOperation(() => api.updatePreferences({ geocoderUrl: 'https://photon.komoot.io/api/' }), 'Default search endpoint restored.'); };

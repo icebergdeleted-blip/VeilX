@@ -17,7 +17,7 @@ else, for example at home. It's off by default.
 The phone page is a full-screen map. You can search at the top (through VeilX's search provider),
 tap the map, or tap a saved-place chip. Then choose **Set location** or **Restore**. These use the
 same Set and Restore actions as the desktop app. **Open in Apple Maps** shows the chosen spot in
-the Apple Maps app. ◎ jumps to where the phone currently appears. The phone being controlled must
+the Apple Maps app. ◐ switches the page between System, Light and Dark; the choice is saved on that phone. ◎ jumps to where the phone currently appears. The phone being controlled must
 still be connected to VeilX (USB, Wi-Fi, or Remote).
 
 ### Apple Maps as the map?

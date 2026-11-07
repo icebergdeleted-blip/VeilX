@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { THEMES } from './theme.mjs';
 import { randomUUID } from 'node:crypto';
 import { place, text, geocoderUrl, routingUrl, speedMph, remoteHost, DEFAULT_SPEED_MPH } from './validation.mjs';
 import { Router, measurePath, pointAlong, speedMps } from './routing.mjs';
@@ -676,6 +677,10 @@ export class Controller extends EventEmitter {
       if (input.tileSource !== 'online' && (typeof input.tilePath !== 'string' || !input.tilePath || input.tilePath.length > 1024)) throw new Error('Choose an offline tile file or folder.');
       this.state.preferences.tileSource = input.tileSource;
       this.state.preferences.tilePath = input.tileSource === 'online' ? null : input.tilePath;
+    }
+    if (input.theme != null) {
+      if (!THEMES.includes(input.theme)) throw new Error('Invalid appearance. Choose System, Light or Dark.');
+      this.state.preferences.theme = input.theme;
     }
     if (input.restoreOnQuit != null) {
       if (typeof input.restoreOnQuit !== 'boolean') throw new Error('Invalid quit preference.');

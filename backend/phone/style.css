@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-:root { --bg: #f4f5f7; --card: rgba(255,255,255,.96); --solid: #fff; --text: #1d1d1f; --muted: #6b6f76; --line: #dde0e4; --blue: #087bff; --green: #1f9d55; --red: #d23a22; --amber: #b26a00; --shadow: 0 8px 30px rgba(0,0,0,.18); }
-@media (prefers-color-scheme: dark) { :root { --bg: #111214; --card: rgba(28,29,32,.96); --solid: #1c1d20; --text: #f2f2f4; --muted: #a0a4ab; --line: #34363b; } }
+:root { --bg: #f4f5f7; --card: rgba(255,255,255,.96); --solid: #fff; --text: #1d1d1f; --muted: #6b6f76; --line: #dde0e4; --blue: #087bff; --green: #1f9d55; --red: #d23a22; --amber: #b26a00; --shadow: 0 8px 30px rgba(0,0,0,.18); --map-bg: #dfe3e8; --tile-filter: none; color-scheme: light; }
+/* Dark: the phone's setting (System) or the page's own Light/Dark choice. Tiles are darkened locally. */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #111214; --card: rgba(28,29,32,.96); --solid: #1c1d20; --text: #f2f2f4; --muted: #a0a4ab; --line: #34363b; --blue: #3d97ff; --red: #ff6b61; --map-bg: #1b1d20; --tile-filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.88) saturate(.7); color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #111214; --card: rgba(28,29,32,.96); --solid: #1c1d20; --text: #f2f2f4; --muted: #a0a4ab; --line: #34363b; --blue: #3d97ff; --red: #ff6b61; --map-bg: #1b1d20; --tile-filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.88) saturate(.7); color-scheme: dark; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; } /* layout rules must never reveal a hidden view */
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
@@ -19,7 +21,8 @@ button:disabled { opacity: .45; cursor: default; }
 
 /* Map app */
 #control-view { position: fixed; inset: 0; }
-#map { position: absolute; inset: 0; background: #dfe3e8; }
+#map { position: absolute; inset: 0; background: var(--map-bg); }
+.leaflet-tile-pane { filter: var(--tile-filter); }
 .top { position: absolute; z-index: 1002; /* search results sit above the map buttons */ top: calc(10px + env(safe-area-inset-top)); left: 10px; right: 10px; }
 .search input { width: 100%; height: 48px; padding: 0 16px; border: 0; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); font-size: 16px; outline: none; }
 .results { margin-top: 6px; border-radius: 14px; background: var(--solid); box-shadow: var(--shadow); overflow: hidden; }
@@ -29,6 +32,9 @@ button:disabled { opacity: .45; cursor: default; }
 .results p { padding: 12px 16px; }
 .fabs { position: absolute; z-index: 1000; right: 10px; top: calc(70px + env(safe-area-inset-top)); display: grid; gap: 8px; }
 .fab { width: 44px; height: 44px; border: 0; border-radius: 12px; background: var(--card); box-shadow: var(--shadow); font-size: 22px; line-height: 1; }
+.theme-fab { font-size: 20px; }
+.theme-fab[data-mode="light"] { color: #c87916; }
+.theme-fab[data-mode="dark"] { color: var(--blue); }
 
 .sheet { position: absolute; z-index: 1000; left: 0; right: 0; bottom: 0; max-height: 62%; overflow-y: auto; padding: 8px 16px calc(16px + env(safe-area-inset-bottom)); background: var(--card); border-radius: 22px 22px 0 0; box-shadow: 0 -6px 30px rgba(0,0,0,.16); display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; overflow-x: hidden; }
 /* Long place names must shrink with ellipses, never widen the sheet and push Restore off screen. */
@@ -57,7 +63,8 @@ button:disabled { opacity: .45; cursor: default; }
 #coords-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 8px; }
 #coords-form input { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--solid); font-size: 16px; }
 #coords-form button { border: 0; border-radius: 12px; padding: 0 14px; background: var(--line); font-weight: 600; }
-.leaflet-control-attribution { font-size: 10px; }
+.leaflet-container .leaflet-control-attribution { font-size: 10px; background: var(--card); color: var(--muted); }
+.leaflet-container .leaflet-control-attribution a { color: var(--blue); }
 
 /* Phones held sideways: the sheet becomes a side panel so the map stays usable. */
 @media (orientation: landscape) and (max-height: 520px) {

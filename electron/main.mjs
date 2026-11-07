@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol, net, session, dialog, Menu, shell, powerMonitor, powerSaveBlocker, Notification } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, net, session, dialog, Menu, shell, powerMonitor, powerSaveBlocker, Notification, nativeTheme } from 'electron';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
@@ -16,6 +16,7 @@ import { TileSource } from '../backend/tiles.mjs';
 import { ConnectionAlerts } from '../backend/alerts.mjs';
 import { PhoneControl } from '../backend/phone-control.mjs';
 import { findSelfDnsName } from '../backend/tailscale.mjs';
+import { normalizeTheme, windowColors } from '../backend/theme.mjs';
 
 const rootPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const devUrl = !app.isPackaged && process.env.GHOST_DEV_URL === 'http://127.0.0.1:5173' ? process.env.GHOST_DEV_URL : null;
@@ -44,6 +45,22 @@ function showAlert(alert) {
 let tileError = null, markTilesReady;
 // The renderer may ask before startup has read the saved tile preference.
 const tilesReady = new Promise(resolve => { markTilesReady = resolve; });
+// Appearance: Electron's themeSource drives prefers-color-scheme in the page, so one stylesheet
+// covers System, Light and Dark. The window background and Windows title-bar buttons follow it.
+function titleBarOverlay() {
+  const colors = windowColors(nativeTheme.shouldUseDarkColors);
+  return { color: colors.background, symbolColor: colors.symbol, height: 58 };
+}
+function applyTheme(theme) {
+  const source = normalizeTheme(theme);
+  if (nativeTheme.themeSource !== source) nativeTheme.themeSource = source;
+}
+nativeTheme.on('updated', () => {
+  if (!window || window.isDestroyed()) return;
+  window.setBackgroundColor(windowColors(nativeTheme.shouldUseDarkColors).background);
+  if (process.platform === 'win32') window.setTitleBarOverlay(titleBarOverlay());
+});
+
 async function applyTileSource(preferences) {
   try { await tileSource.configure(preferences.tileSource || 'online', preferences.tilePath); tileError = null; }
   catch (error) { tileError = error.message; await tileSource.configure('online'); }
@@ -96,6 +113,7 @@ async function boot() {
     if (window && !window.isDestroyed()) window.webContents.send('ghost:phone-control', phoneControl.status());
   });
   controller.on('state', state => {
+    applyTheme(state.preferences?.theme);
     wakeLock.update(state); // released as soon as Restore removes the session
     showAlert(connectionAlerts.update(state));
     if (window && !window.isDestroyed()) window.webContents.send('ghost:state', state);
@@ -168,9 +186,9 @@ async function boot() {
   });
 
   window = new BrowserWindow({
-    width: 1440, height: 940, minWidth: 960, minHeight: 680, backgroundColor: '#f8f9fb', show: false,
+    width: 1440, height: 940, minWidth: 960, minHeight: 680, backgroundColor: windowColors(nativeTheme.shouldUseDarkColors).background, show: false,
     title: 'VeilX — Your location, on your terms', titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 22 },
-    ...(process.platform === 'win32' ? { titleBarOverlay: { color: '#f8f9fb', symbolColor: '#1d1d1f', height: 58 } } : {}),
+    ...(process.platform === 'win32' ? { titleBarOverlay: titleBarOverlay() } : {}),
     webPreferences: { preload: path.join(rootPath, 'electron/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webSecurity: true }
   });
   window.webContents.setUserAgent(`${window.webContents.getUserAgent()} VeilX/${app.getVersion()}`);
@@ -194,7 +212,7 @@ async function boot() {
   if (devUrl) await window.loadURL(devUrl);
   else if (existsSync(path.join(dist, 'index.html'))) await window.loadURL('ghost://app/index.html');
   else throw new Error('Build the interface first with npm run build.');
-  try { await controller.init(); } finally { await applyTileSource(controller.state.preferences); }
+  try { await controller.init(); } finally { applyTheme(controller.state.preferences.theme); await applyTileSource(controller.state.preferences); }
   if (controller.state.preferences.phoneControlEnabled) {
     // Start only on Tailscale; if it is not up yet, Settings shows why and offers to retry.
     phoneControl.start().catch(() => {});

@@ -17,6 +17,7 @@ export const defaults = () => ({
     remoteHost: null,
     remoteUdid: null,
     phoneControlEnabled: false,
+    theme: 'system',
   }
 });
 

@@ -2,6 +2,22 @@
 // Phone control page. Talks only to the VeilX computer that served it (same origin).
 (() => {
   const $ = id => document.getElementById(id);
+
+  // Appearance for this phone only (kept in this browser). System follows the phone's setting.
+  const THEMES = ['system', 'light', 'dark'];
+  const THEME_NAMES = { system: 'System', light: 'Light', dark: 'Dark' };
+  function readTheme() { try { const value = localStorage.getItem('veilx-theme'); return THEMES.includes(value) ? value : 'system'; } catch { return 'system'; } }
+  function applyTheme(theme) {
+    if (theme === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
+    const button = $('theme');
+    if (button) { button.setAttribute('aria-label', `Appearance: ${THEME_NAMES[theme]}. Tap to change.`); button.title = `Appearance: ${THEME_NAMES[theme]}`; button.dataset.mode = theme; }
+  }
+  applyTheme(readTheme());
+  $('theme').addEventListener('click', () => {
+    const next = THEMES[(THEMES.indexOf(readTheme()) + 1) % THEMES.length];
+    try { localStorage.setItem('veilx-theme', next); } catch {}
+    applyTheme(next);
+  });
   let state = null, map = null, pin = null, spoof = null, chosen = null, sending = false, timer = null, searchNumber = 0;
 
   async function api(path, body) {

@@ -38,7 +38,7 @@ try {
     await page.click('#set');
     await page.waitForFunction(() => document.querySelector('#pill').textContent === 'Spoofing');
     await page.waitForFunction(() => !document.querySelector('#restore').disabled);
-    for (const id of ['set', 'restore', 'apple-maps']) {
+    for (const id of ['set', 'restore', 'apple-maps', 'theme']) {
       const box = await page.locator(`#${id}`).boundingBox();
       const onScreen = box && box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 0.5 && box.y + box.height <= viewport.height + 0.5;
       if (!onScreen) failures.push(`${name}: #${id} off screen ${JSON.stringify(box)}`);
@@ -51,8 +51,26 @@ try {
     await page.waitForFunction(() => document.querySelector('#pill').textContent === 'Real location');
     await page.close();
   }
+  // Appearance: System follows the phone; the toggle cycles System → Light → Dark and is remembered.
+  const page = await browser.newPage({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, colorScheme: 'dark' });
+  await page.route('https://tile.openstreetmap.org/**', route => route.fulfill({ status: 204 }));
+  await page.goto(`${base}/#pair=${control.newPairingCode().pairing.code}`);
+  await page.waitForSelector('#control-view:not([hidden])');
+  const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const dark = rgb => rgb.match(/\d+/g).slice(0, 3).map(Number).reduce((a, b) => a + b) / 3 < 100;
+  if (!dark(await background())) failures.push('theme: System on a dark phone is not dark');
+  if (shots) await page.screenshot({ path: path.join(shots, 'phone-dark.png') });
+  await page.click('#theme');
+  if (dark(await background())) failures.push('theme: Light did not override a dark phone');
+  await page.click('#theme');
+  await page.reload();
+  await page.waitForSelector('#control-view:not([hidden])');
+  if (!dark(await background()) || await page.getAttribute('html', 'data-theme') !== 'dark') failures.push('theme: Dark was not remembered after reload');
+  await page.click('#theme');
+  if (await page.getAttribute('html', 'data-theme') !== null) failures.push('theme: did not return to System');
+  await page.close();
 } finally {
   await browser.close(); await control.stop(); await rm(dir, { recursive: true, force: true });
 }
 if (failures.length) { console.error(failures.join('\n')); process.exit(1); }
-console.log('phone layout ok: Set, Restore and Apple Maps stay on screen in portrait, landscape and large phones');
+console.log('phone layout ok: Set, Restore, Apple Maps and Appearance stay on screen in portrait, landscape and large phones; the theme toggle works');

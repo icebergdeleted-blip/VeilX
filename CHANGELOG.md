@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Appearance setting: **System**, **Light** or **Dark** (Settings › Appearance). System follows the
+  computer and switches live. The window background and Windows title-bar buttons follow it, and
+  the map tiles are darkened locally in dark mode, with no extra map service.
+- The phone control page has its own ◐ toggle (System → Light → Dark), remembered in that phone's
+  browser.
+- `scripts/check-theme.mjs` checks the desktop themes; `scripts/check-phone-layout.mjs` now checks
+  the phone toggle too.
+
 ## 0.2.0 (VeilX, pre-release)
 
 - The app is now **VeilX**, an independent project based on Ghost (GPL-3.0-or-later).
