@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Headless server (`npm run server`) for an always-on Linux host such as a Raspberry Pi 5.
+- Headless VeilX server (`npm run server`) for an always-on Linux host such as a Raspberry Pi 5.
   The phone page is its interface; iPhone setup (devices, prepare, setup-remote,
   remote-address, connection, restore) runs from a local command line over SSH. Includes a
   systemd installer and `docs/raspberry-pi.md`.

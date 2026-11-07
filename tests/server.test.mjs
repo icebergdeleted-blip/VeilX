@@ -5,7 +5,7 @@ import { EventEmitter } from 'node:events';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { COMMANDS, GhostServer, controlSocketPath, dataDirectory, requestAdmin } from '../server/main.mjs';
+import { COMMANDS, GhostServer, controlSocketPath, dataDirectory, legacyDataDirectory, requestAdmin } from '../server/main.mjs';
 
 const quiet = { info() {}, warn() {}, error() {} };
 
@@ -59,9 +59,15 @@ function manualTimers() {
 
 test('the data folder follows GHOST_DATA_DIR, then XDG_DATA_HOME, then ~/.local/share', () => {
   assert.equal(dataDirectory({ GHOST_DATA_DIR: '/srv/ghost' }, '/home/pi'), path.resolve('/srv/ghost'));
-  assert.equal(dataDirectory({ XDG_DATA_HOME: '/data' }, '/home/pi'), path.join(path.resolve('/data'), 'ghost'));
-  assert.equal(dataDirectory({}, '/home/pi'), path.join('/home/pi', '.local', 'share', 'ghost'));
-  assert.equal(controlSocketPath('/home/pi/.local/share/ghost', 'linux'), path.join('/home/pi/.local/share/ghost', 'control.sock'));
+  assert.equal(dataDirectory({ XDG_DATA_HOME: '/data' }, '/home/pi'), path.join(path.resolve('/data'), 'veilx'));
+  assert.equal(dataDirectory({}, '/home/pi'), path.join('/home/pi', '.local', 'share', 'veilx'));
+  assert.equal(controlSocketPath('/home/pi/.local/share/veilx', 'linux'), path.join('/home/pi/.local/share/veilx', 'control.sock'));
+});
+
+test('a pre-rename Ghost server folder is the migration source, unless a data folder is set explicitly', () => {
+  assert.equal(legacyDataDirectory({}, '/home/pi'), path.join('/home/pi', '.local', 'share', 'ghost'));
+  assert.equal(legacyDataDirectory({ XDG_DATA_HOME: '/data' }, '/home/pi'), path.join(path.resolve('/data'), 'ghost'));
+  assert.equal(legacyDataDirectory({ GHOST_DATA_DIR: '/srv/x' }, '/home/pi'), null);
 });
 
 test('phone control keeps retrying until Tailscale is up, and a pairing code needs it running', async () => {
@@ -205,5 +211,5 @@ test('the systemd service lets Ghost restore before its iPhone helper is stopped
   assert.match(script, /^KillMode=mixed$/m); // SIGTERM to Ghost only; the helper must still be alive to send Restore
   assert.match(script, /^TimeoutStopSec=(\d+)$/m);
   assert.ok(Number(script.match(/^TimeoutStopSec=(\d+)$/m)[1]) >= 60);
-  assert.match(script, /^ExecStart=\$node \$ghost_dir\/server\/main\.mjs$/m);
+  assert.match(script, /^ExecStart=\$node \$veilx_dir\/server\/main\.mjs$/m);
 });
