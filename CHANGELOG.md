@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 (VeilX, pre-release)
+
+- The app is now **VeilX**, an independent project based on Ghost (GPL-3.0-or-later).
+  Installer names, the app ID, window title, phone page and alerts say VeilX.
+- On first launch VeilX copies saved places, settings, recovery records, routes and phone
+  pairings from an existing Ghost install. Ghost's own data is left as it was.
+- Includes everything in the Ghost-based 0.1.8 pre-release below.
+
 ## 0.1.8 (pre-release)
 
 ### Remote iPhone connection and phone control

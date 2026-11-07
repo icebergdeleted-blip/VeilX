@@ -1,6 +1,7 @@
 # Third-party components
 
-Ghost's original application code is offered under GPL-3.0-or-later. See LICENSE.
+VeilX is based on Ghost (https://github.com/Blueturboguy07/ghost-location), copyright the Ghost
+contributors, licensed GPL-3.0-or-later. VeilX's changes are also GPL-3.0-or-later. See LICENSE.
 Dependencies retain their own copyright and license terms. No code from iDescriptor,
 GeoPort, or LocationSimulator is copied into this application.
 

@@ -1,4 +1,8 @@
-# Ghost
+# VeilX
+
+> VeilX is an independent project based on [Ghost](https://github.com/Blueturboguy07/ghost-location)
+> by Blueturboguy07, used under GPL-3.0-or-later. It is not affiliated with or endorsed by the Ghost
+> authors, Apple, or Google.
 
 A small Electron app for setting a fixed phone location or following a road route over USB, Wi-Fi, or
 (iPhone) remotely through Tailscale. Search for a
@@ -6,37 +10,36 @@ place, drop a pin, or enter coordinates, then explicitly apply it to your select
 phone. Windows and macOS share one interface and use the appropriate iPhone or
 Android adapter.
 
-Current version: **0.1.8** (pre-release). It adds remote iPhone connections, phone control from a
+Current version: **0.2.0** (pre-release). Compared with Ghost 0.1.7 it adds remote iPhone connections, phone control from a
 browser, and offline maps and routing. See [CHANGELOG.md](CHANGELOG.md).
 
-![Ghost following an example road route in Chicago](docs/images/ghost-route.png)
+![VeilX following an example road route in Chicago](docs/images/ghost-route.png)
 
 *Route mode in the actual interface, using an example phone and sample Chicago route.*
 
 ## Download and install
 
-Get the [Ghost 0.1.8 pre-release for Mac or Windows](https://github.com/icebergdeleted-blip/ghost-location/releases/tag/v0.1.8-remote).
-The last upstream release is [0.1.7](https://github.com/Blueturboguy07/ghost-location/releases/tag/v0.1.7).
-Follow the [setup guide](SETUP.md) for Mac → iPhone, Windows → iPhone, Mac → Android, or Windows → Android, or use [Publik's guided install](https://publikhq.com/ghost/install).
+Get [VeilX for Mac or Windows](https://github.com/icebergdeleted-blip/VeilX/releases/latest).
+Follow the [setup guide](SETUP.md) for Mac → iPhone, Windows → iPhone, Mac → Android, or Windows → Android.
 
-The downloads include the phone runtimes. No programming tools or Ghost account are needed. These early releases are unsigned; the guide explains opening them and the limits of current device testing.
+The downloads include the phone runtimes. No programming tools or VeilX account are needed. These early releases are unsigned; the guide explains opening them and the limits of current device testing.
 
 ## Features
 
 
 - Road routes through up to 12 stops, adjustable speed (default 45 mph), one-second updates, Pause and Resume.
-- Route geometry and progress saved to disk, so a route can be resumed manually after Ghost restarts.
+- Route geometry and progress saved to disk, so a route can be resumed manually after VeilX restarts.
 - Optional offline map (local raster MBTiles or tile folder) and self-hosted Photon/OSRM endpoints; see [docs/offline-maps.md](docs/offline-maps.md).
 - Interactive map, manual place search, draggable pin, and latitude/longitude input.
 - First-run Mac/Windows and iPhone/Android survey with a checklist tailored to all four USB configurations.
 - Saved places and recent selections stored locally.
-- A one-click USB → Wi-Fi handoff keeps the current location and resumes routes. Ghost offers it after a working USB session when the computer has Wi-Fi. Android 11+ also supports cable-free pairing.
+- A one-click USB → Wi-Fi handoff keeps the current location and resumes routes. VeilX offers it after a working USB session when the computer has Wi-Fi. Android 11+ also supports cable-free pairing.
 - iPhone location simulation through a bundled pymobiledevice3 sidecar.
 - Remote iPhone connection through Tailscale after a one-time USB setup; see [Remote iPhone and phone control](#remote-iphone-and-phone-control).
 - Optional phone control: set or restore locations from your phone's browser over Tailscale ([docs/phone-control.md](docs/phone-control.md)).
 - Desktop alerts when a live location loses or regains its connection.
 - Android location simulation through bundled ADB and Appium Settings.
-- Ongoing fixed-location updates and same-phone reconnection while Ghost stays open.
+- Ongoing fixed-location updates and same-phone reconnection while VeilX stays open.
 - Automatic stale recovery-record cleanup when a different usable USB phone appears.
 - Explicit restoration, normal-quit cleanup, and a persisted recovery journal.
 - Honest disconnected/error states: lost connectivity never means “restored”.
@@ -64,19 +67,19 @@ available inside Electron. For a production renderer inside Electron: `npm start
 
 ## Device setup
 
-On first launch, choose the computer and phone you use. Ghost saves that choice
+On first launch, choose the computer and phone you use. VeilX saves that choice
 locally and shows only the relevant setup checklist. Open **Setup** in the toolbar
 or **Change** in Settings to review or switch configurations later.
 
 **iPhone (initial target: iOS 17.4+):** connect with a USB data cable, unlock and
 trust the computer, enable Developer Mode in Settings → Privacy & Security, and
-restart when requested. Use Ghost's Prepare action to mount the developer support
+restart when requested. Use VeilX's Prepare action to mount the developer support
 image. Initial preparation requires internet and can take a few minutes. Windows
 also needs Apple's USB services/drivers (upstream recommends Microsoft Store
 iTunes). The application does not remove passcodes or change Find My settings.
 
 **Android (8.0+):** enable Developer options and USB debugging, connect a USB data
-cable, and approve the computer's RSA prompt. Ghost's explicit Prepare action
+cable, and approve the computer's RSA prompt. VeilX's explicit Prepare action
 installs Appium Settings, grants location access, and selects it as the mock-location
 provider. Follow any additional device-specific prompts. Some Windows phones need
 the manufacturer's ADB USB driver. No root is required by this approach.
@@ -91,12 +94,12 @@ Limits, measured on iOS 27.0.1:
 - The iPhone must be joined to a Wi-Fi network (any network). iOS refuses the connection on
   cellular alone. Away from Wi-Fi, a personal hotspot from a second phone works.
 - The location lasts only while connected. If the connection drops, the iPhone returns to its
-  real location within about a minute. Ghost alerts you and keeps retrying.
+  real location within about a minute. VeilX alerts you and keeps retrying.
 - After each iPhone restart, plug it in once and choose **Prepare**.
 
 **Phone control** (off by default, Settings › Phone control) serves a map page only on this
 computer's Tailscale address. Pair a phone with a QR code or 6-digit code, then search, pick a
-saved place, **Set location**, or **Restore**. The computer must stay awake with Ghost open. See
+saved place, **Set location**, or **Restore**. The computer must stay awake with VeilX open. See
 [docs/phone-control.md](docs/phone-control.md) for setup and the safety model, and
 [docs/wifi-remote-findings.md](docs/wifi-remote-findings.md) for the hardware results.
 
@@ -105,14 +108,14 @@ saved place, **Set location**, or **Restore**. The computer must stay awake with
 Selecting a map pin only changes the preview. **Set location** starts or updates a
 fixed location on the selected phone. Only one unresolved phone session is
 kept at a time. When an unknown, waiting, or error recovery record belongs to a
-different phone and Ghost discovers another usable USB phone, Ghost automatically
+different phone and VeilX discovers another usable USB phone, VeilX automatically
 discards the old record so the newly connected phone can be prepared or have a
 location set.
 Active, applying, reconnecting, and stopping sessions remain protected from this
 automatic cleanup.
 
 On iPhone, the sidecar reasserts the selected coordinates on a one-second loop.
-Each DVT location command is awaited before Ghost records its acknowledgement.
+Each DVT location command is awaited before VeilX records its acknowledgement.
 Fresh acknowledgements also keep the selected USB connection ready during
 discovery polling, so a transient discovery miss does not gray out a healthy
 session. On Android, the on-phone helper emits timestamped mock fixes every two
@@ -127,12 +130,12 @@ Verify the result in the intended phone app.
 **Restore** stops the Android mock service or sends the iOS clear-location command.
 The iOS clear API does not return an independent real-GPS measurement; cached
 locations in other apps can take time to update. Normal quit attempts restoration
-by default. If that fails, Ghost offers to keep the app open or quit with an
+by default. If that fails, VeilX offers to keep the app open or quit with an
 unresolved session saved for recovery.
 
-If the phone disconnects during a live session, Ghost waits and automatically reconnects
+If the phone disconnects during a live session, VeilX waits and automatically reconnects
 the **same phone and applied target** when it becomes available again, while the
-same Ghost process remains open. Selecting another pin still changes only the
+same VeilX process remains open. Selecting another pin still changes only the
 preview; use **Update location** to apply that target. You can also use **Retry
 location** or **Reconnect & set location** on the same phone after a connection
 failure. While the previous session is active, applying, reconnecting, or stopping,
@@ -145,13 +148,13 @@ phone is absent or cannot be verified, it may retain its last simulated location
 until it is restarted or restored separately.
 
 **Restore** cancels automatic reconnection, including while the cable is absent.
-If reconnection is already in progress, Ghost waits for that bounded operation
-before clearing the simulation. An unplugged phone must reconnect before Ghost
+If reconnection is already in progress, VeilX waits for that bounded operation
+before clearing the simulation. An unplugged phone must reconnect before VeilX
 can send the clear command.
 
 USB unplug, laptop sleep, force-quit, and a crashed helper cannot guarantee immediate
 restoration. Android's upstream helper can keep supplying its last coordinates
-without the cable. After Ghost restarts, continuing or clearing a saved session on
+without the cable. After VeilX restarts, continuing or clearing a saved session on
 the same phone requires a manual **Retry location** or **Restore**; it is never
 automatically resumed on startup. A different usable phone instead triggers the
 unresolved-record cleanup described above.
@@ -165,7 +168,7 @@ Choose **Route**, select a start using search, coordinates, or a map pin, and cl
 stops, in order. **Plan road route** previews the driving route. **Start route**
 moves the selected phone to the first road point and begins playback.
 
-Ghost uses the open-source [OSRM](https://github.com/Project-OSRM/osrm-backend)
+VeilX uses the open-source [OSRM](https://github.com/Project-OSRM/osrm-backend)
 routing service with OpenStreetMap roads. Pins snap to roads within 1 km; if no
 connected driving route exists, planning fails instead of drawing a straight line.
 The default speed is **45 mph (20.1168 m/s)**. Change it with the **Speed** field
@@ -185,7 +188,7 @@ the app does not guarantee that every phone app consumes each fix.
 
 Route geometry and progress are saved next to the settings file (`route.json`):
 on start, on pause, disconnect and arrival, and at most every five seconds while
-moving. After Ghost restarts, a route that belongs to the unresolved session's
+moving. After VeilX restarts, a route that belongs to the unresolved session's
 phone comes back **paused**. **Resume route** first re-sends the last journaled
 point, then continues. Nothing resumes automatically. Restore, or replacing the
 record with a different phone, deletes the saved route. Restore before
@@ -201,7 +204,7 @@ stay in the local application settings file. Planning a route sends the chosen
 stop coordinates (without device identifiers) to the public OSRM service. Route
 playback itself makes no routing-service requests. Search is rate-limited and cached for
 the running app; there is no autocomplete, background geocoding, or offline tile
-download. Ghost never downloads tiles for offline use itself; see
+download. VeilX never downloads tiles for offline use itself; see
 [docs/offline-maps.md](docs/offline-maps.md) to prepare your own. Pin and coordinate
 selection remain available if search or tiles fail.
 
@@ -210,7 +213,7 @@ availability guarantee. Change the HTTPS Photon API endpoint in Settings for a
 larger public deployment. See THIRD_PARTY_NOTICES.md.
 
 The OSRM demo service is for reasonable noncommercial use, capped at one request
-per second, with no uptime guarantee. Ghost requests it only on **Plan road route**.
+per second, with no uptime guarantee. VeilX requests it only on **Plan road route**.
 See [OSRM's demo policy](https://github.com/Project-OSRM/osrm-backend/wiki/Demo-server).
 A larger public deployment needs its own routing service instead of relying on the demo.
 
@@ -231,8 +234,8 @@ device runtimes. Release installers are unsigned. Signing/notarization credentia
 for a trusted macOS launch and a recognized Windows publisher.
 No publishing or repository upload is performed by these commands.
 
-For v0.1.8, a macOS arm64 build produces `Ghost-0.1.8-mac-arm64.dmg` and
-`Ghost-0.1.8-mac-arm64.zip` in `release/`.
+For v0.2.0, a macOS arm64 build produces `VeilX-0.2.0-mac-arm64.dmg` and
+`VeilX-0.2.0-mac-arm64.zip` in `release/`.
 
 ### Native CI builds
 
@@ -299,8 +302,15 @@ Automated transport tests use controlled doubles; they are not evidence of phone
 compatibility. The project must be tested on actual target phone/OS combinations
 before claiming all four connections are verified.
 
-## License
+## License and credits
 
 GPL-3.0-or-later. See LICENSE and THIRD_PARTY_NOTICES.md.
+
+VeilX is based on [Ghost](https://github.com/Blueturboguy07/ghost-location) by Blueturboguy07 and
+the Ghost contributors, who keep the copyright in their work. The commit history shows every change
+made since. Some documents in `docs/` were written before the rename and still say "Ghost".
+
+VeilX is a developer and testing tool for simulating a device location. It is provided as is,
+without warranty. Make sure your use follows the terms of the apps and services you use.
 
 For wireless setup, see [the Wi-Fi guide](SETUP.md#connect-over-the-same-wi-fi-network-017). iPhone Wi-Fi and Remote were checked on one iPhone (iOS 27.0.1); Android Wi-Fi still needs physical phone validation.
