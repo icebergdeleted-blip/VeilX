@@ -1,9 +1,5 @@
 # VeilX
 
-> VeilX is an independent project based on [Ghost](https://github.com/Blueturboguy07/ghost-location)
-> by Blueturboguy07, used under GPL-3.0-or-later. It is not affiliated with or endorsed by the Ghost
-> authors, Apple, or Google.
-
 A small Electron app for setting a fixed phone location or following a road route over USB, Wi-Fi, or
 (iPhone) remotely through Tailscale. Search for a
 place, drop a pin, or enter coordinates, then explicitly apply it to your selected
