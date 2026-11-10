@@ -10,8 +10,8 @@ place, drop a pin, or enter coordinates, then explicitly apply it to your select
 phone. Windows and macOS share one interface and use the appropriate iPhone or
 Android adapter.
 
-Current version: **0.2.0** (pre-release). Compared with Ghost 0.1.7 it adds remote iPhone connections, phone control from a
-browser, and offline maps and routing. See [CHANGELOG.md](CHANGELOG.md).
+Current version: **0.3.0** (pre-release). Compared with Ghost 0.1.7 it adds remote iPhone connections, phone control from a
+browser, offline maps and routing, and light and dark appearance. See [CHANGELOG.md](CHANGELOG.md).
 
 ![VeilX following an example road route in Chicago](docs/images/veilx-route.png)
 
@@ -235,8 +235,8 @@ device runtimes. Release installers are unsigned. Signing/notarization credentia
 for a trusted macOS launch and a recognized Windows publisher.
 No publishing or repository upload is performed by these commands.
 
-For v0.2.0, a macOS arm64 build produces `VeilX-0.2.0-mac-arm64.dmg` and
-`VeilX-0.2.0-mac-arm64.zip` in `release/`.
+For v0.3.0, a macOS arm64 build produces `VeilX-0.3.0-mac-arm64.dmg` and
+`VeilX-0.3.0-mac-arm64.zip` in `release/`.
 
 ### Native CI builds
 

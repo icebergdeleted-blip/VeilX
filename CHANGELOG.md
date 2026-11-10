@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (pre-release)
 
+- Phone page: the pairing code box and Pair button stay on screen on narrow phones.
 - Appearance setting: **System**, **Light** or **Dark** (Settings › Appearance). System follows the
   computer and switches live. The window background and Windows title-bar buttons follow it, and
   the map tiles are darkened locally in dark mode, with no extra map service.

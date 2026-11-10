@@ -10,9 +10,9 @@ Download the latest **VeilX** from [GitHub Releases](https://github.com/icebergd
 
 | Your computer | Download |
 | --- | --- |
-| Mac with an Apple chip (M1 or newer) | `VeilX-0.2.0-mac-arm64.dmg` |
-| Mac with an Intel processor | `VeilX-0.2.0-mac-x64.dmg` |
-| Windows PC with an Intel/AMD 64-bit processor | `VeilX-0.2.0-win-x64.exe` |
+| Mac with an Apple chip (M1 or newer) | `VeilX-0.3.0-mac-arm64.dmg` |
+| Mac with an Intel processor | `VeilX-0.3.0-mac-x64.dmg` |
+| Windows PC with an Intel/AMD 64-bit processor | `VeilX-0.3.0-win-x64.exe` |
 
 On Mac, **Apple menu → About This Mac** identifies the chip. On Windows, look at **Settings → System → About → System type**. Windows ARM and Linux are not release targets. Native builds are checked on macOS 15 and Windows Server 2025; other OS versions have not been rehearsed.
 
