@@ -9,7 +9,7 @@ Android adapter.
 Current version: **0.2.0** (pre-release). Compared with Ghost 0.1.7 it adds remote iPhone connections, phone control from a
 browser, and offline maps and routing. See [CHANGELOG.md](CHANGELOG.md).
 
-![VeilX following an example road route in Chicago](docs/images/ghost-route.png)
+![VeilX following an example road route in Chicago](docs/images/veilx-route.png)
 
 *Route mode in the actual interface, using an example phone and sample Chicago route.*
 
