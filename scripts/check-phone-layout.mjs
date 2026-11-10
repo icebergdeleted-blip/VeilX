@@ -51,20 +51,27 @@ try {
     await page.waitForFunction(() => document.querySelector('#pill').textContent === 'Real location');
     await page.close();
   }
-  // Pairing screen: the code box and Pair button fit narrow phones.
-  for (const width of [320, 375, 430]) {
-    const page = await browser.newPage({ viewport: { width, height: 700 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
-    await page.goto(base);
-    await page.waitForSelector('#pair-view:not([hidden])');
-    for (const selector of ['#pair-code', '#pair-form button']) {
-      const box = await page.locator(selector).boundingBox();
-      if (!box || box.x < 0 || box.x + box.width > width + 0.5) failures.push(`pairing ${width}px: ${selector} off screen ${JSON.stringify(box)}`);
+  // Pairing screen (desktop app text and server text): the code box and Pair button fit narrow phones.
+  const serverControl = new PhoneControl({ controller, dataPath: path.join(dir, 's.json'), port: 0, address: () => '127.0.0.1', allowAddress: () => true, codeSource: 'server' });
+  await serverControl.start();
+  try {
+    for (const [source, url] of [['app', base], ['server', `http://127.0.0.1:${serverControl.port}`]]) {
+      for (const width of [320, 375, 430]) {
+        const viewport = { width, height: 700 };
+        const page = await browser.newPage({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+        await page.goto(url);
+        await page.waitForSelector('#pair-view:not([hidden])');
+        for (const selector of ['#pair-code', '#pair-form button']) {
+          const box = await page.locator(selector).boundingBox();
+          if (!box || box.x < 0 || box.x + box.width > width + 0.5) failures.push(`pairing ${source} ${width}px: ${selector} off screen ${JSON.stringify(box)}`);
+        }
+        const scrollW = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+        if (scrollW > 0) failures.push(`pairing ${source} ${width}px: sideways overflow ${scrollW}px`);
+        if (shots) await page.screenshot({ path: path.join(shots, `pair-${source}-${width}.png`) });
+        await page.close();
+      }
     }
-    const scrollW = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
-    if (scrollW > 0) failures.push(`pairing ${width}px: sideways overflow ${scrollW}px`);
-    if (shots) await page.screenshot({ path: path.join(shots, `pair-${width}.png`) });
-    await page.close();
-  }
+  } finally { await serverControl.stop(); }
 
   // Appearance: System follows the phone; the toggle cycles System → Light → Dark and is remembered.
   const page = await browser.newPage({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, colorScheme: 'dark' });
