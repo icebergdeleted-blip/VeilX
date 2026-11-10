@@ -4,8 +4,12 @@ Run VeilX on an always-on Linux computer, such as a Raspberry Pi 5, and control 
 phone's browser over Tailscale. There is no desktop window: you set up the iPhone with a few
 commands over SSH, and the [phone page](phone-control.md) does Set and Restore.
 
+The headless server is an optional extra that lives on the `feature/pi-server` branch, which
+follows `main`; the desktop app does not need it.
+
 Tested target: Raspberry Pi 5, Raspberry Pi OS / Debian 13 (trixie), arm64. Needs Tailscale on the
-Pi, signed in to the same tailnet as your phone.
+Pi, signed in to the same tailnet as your phone. See [Tested on hardware](#tested-on-hardware) for
+what has been confirmed.
 
 ## 1. Install the system packages
 
@@ -37,7 +41,7 @@ node -v
 ## 3. Get VeilX
 
 ```sh
-git clone https://github.com/icebergdeleted-blip/VeilX.git ~/VeilX
+git clone -b feature/pi-server https://github.com/icebergdeleted-blip/VeilX.git ~/VeilX
 cd ~/VeilX
 npm ci --omit=dev
 python3 -m venv sidecar/.venv
@@ -89,6 +93,9 @@ node server/main.mjs pair
 Open the link it prints on your phone (or open the address and type the 6-digit code). The code
 works once and expires after 5 minutes. Then search or tap the map and choose **Set location**.
 
+Pairing belongs to the address you paired on. If you paired on the Pi's `….ts.net` name, keep using
+that name; opening the page by its `100.x` address shows the pairing screen again.
+
 ## 7. Start VeilX automatically
 
 Stop the foreground server (Ctrl+C), then:
@@ -113,6 +120,21 @@ npm ci --omit=dev
 sidecar/.venv/bin/pip install -r sidecar/requirements.txt
 sudo systemctl restart veilx
 ```
+
+## Tested on hardware
+
+2026-11-09, Raspberry Pi 5 (4 GB), Debian 13 trixie arm64, Python 3.13.5, Node.js v24.18.0,
+pymobiledevice3 11.50.0, with an iPhone17,3 on iOS 27.0.1:
+
+| Step | Result |
+| --- | --- |
+| Install (steps 1–4) | Worked as written, including `pip install` on Python 3.13 arm64 (only network retries, no build errors). |
+| Phone page and pairing | Served on the Pi's Tailscale name; paired with the link from `pair`. |
+| USB setup | `devices`, `prepare` (`"prepared": true`), `setup-remote`, `find-iphones` and `remote-address` all worked over USB. |
+| Remote, iPhone unplugged | `connection remote` listed the iPhone; **Set location** from the phone page moved it (checked in Apple Maps), and **Restore** returned it. |
+| Service | `install-service.sh` installed and enabled `veilx.service`. With a location set, `systemctl stop veilx` logged “Restored the phone location before stopping.” and the iPhone showed its real location again. |
+
+Not yet tested on the Pi: starting after a Pi reboot, and Prepare after an iPhone restart.
 
 ## Limits
 
