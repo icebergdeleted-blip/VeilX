@@ -51,6 +51,21 @@ try {
     await page.waitForFunction(() => document.querySelector('#pill').textContent === 'Real location');
     await page.close();
   }
+  // Pairing screen: the code box and Pair button fit narrow phones.
+  for (const width of [320, 375, 430]) {
+    const page = await browser.newPage({ viewport: { width, height: 700 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+    await page.goto(base);
+    await page.waitForSelector('#pair-view:not([hidden])');
+    for (const selector of ['#pair-code', '#pair-form button']) {
+      const box = await page.locator(selector).boundingBox();
+      if (!box || box.x < 0 || box.x + box.width > width + 0.5) failures.push(`pairing ${width}px: ${selector} off screen ${JSON.stringify(box)}`);
+    }
+    const scrollW = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    if (scrollW > 0) failures.push(`pairing ${width}px: sideways overflow ${scrollW}px`);
+    if (shots) await page.screenshot({ path: path.join(shots, `pair-${width}.png`) });
+    await page.close();
+  }
+
   // Appearance: System follows the phone; the toggle cycles System → Light → Dark and is remembered.
   const page = await browser.newPage({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, colorScheme: 'dark' });
   await page.route('https://tile.openstreetmap.org/**', route => route.fulfill({ status: 204 }));
@@ -73,4 +88,4 @@ try {
   await browser.close(); await control.stop(); await rm(dir, { recursive: true, force: true });
 }
 if (failures.length) { console.error(failures.join('\n')); process.exit(1); }
-console.log('phone layout ok: Set, Restore, Apple Maps and Appearance stay on screen in portrait, landscape and large phones; the theme toggle works');
+console.log('phone layout ok: Set, Restore, Apple Maps and Appearance stay on screen in portrait, landscape and large phones; the pairing screen fits; the theme toggle works');
