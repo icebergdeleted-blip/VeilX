@@ -18,6 +18,21 @@ const MAX_SESSIONS = 10;
 const MAX_BODY = 4096;
 const COMMAND_GAP_MS = 1000;
 const COOKIE = 'ghost_phone';
+// Where the phone owner gets a pairing code: the desktop app's Settings, or the headless server's CLI.
+const PAIRING_HELP = {
+  app: {
+    page: 'On your computer, open VeilX › Settings › Phone control › <strong>Pair a phone</strong>. Scan the QR code with your camera, or type the 6-digit code here.',
+    none: 'No pairing code is active. Choose “Pair a phone” on the computer.',
+    wrong: 'That code is not right. Check the computer and try again.',
+    locked: 'Too many wrong codes. Create a new code on the computer.',
+  },
+  server: {
+    page: 'On the VeilX server, run <code>node server/main.mjs pair</code>. Open the link it prints on this phone, or type the 6-digit code here.',
+    none: 'No pairing code is active. Run “node server/main.mjs pair” on the server.',
+    wrong: 'That code is not right. Check the server and try again.',
+    locked: 'Too many wrong codes. Run “node server/main.mjs pair” on the server for a new code.',
+  },
+};
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
@@ -67,8 +82,10 @@ const VENDOR = {
  */
 export class PhoneControl extends EventEmitter {
   constructor({ controller, dataPath, port = PHONE_CONTROL_PORT, address = localTailscaleIPv4, now = Date.now, allowAddress = isTailnetAddress,
-    dnsName = async () => null, search = null } = {}) {
+    dnsName = async () => null, search = null, codeSource = 'app' } = {}) {
     super();
+    if (!PAIRING_HELP[codeSource]) throw new Error(`Unknown pairing code source: ${codeSource}`);
+    this.help = PAIRING_HELP[codeSource];
     Object.assign(this, { controller, dataPath, port, address, now, allowAddress, dnsName, search });
     this.server = null; this.host = null; this.error = null; this.name = null; this.lastSearchAt = -Infinity;
     this.code = null; this.sessions = []; this.loaded = false; this.lastCommandAt = -Infinity;
@@ -214,18 +231,19 @@ export class PhoneControl extends EventEmitter {
   }
 
   async file(res, file, type) {
-    const data = await readFile(file);
+    let data = await readFile(file);
+    if (path.basename(file) === 'index.html') data = data.toString('utf8').replace('{{PAIRING_HELP}}', this.help.page);
     res.writeHead(200, this.headers(type)); res.end(data);
   }
 
   async pair(req, res) {
     const { code } = await this.body(req);
     const current = this.code;
-    if (!current || current.expiresAt <= this.now()) { this.json(res, 400, { error: 'No pairing code is active. Choose “Pair a phone” on the computer.' }); return; }
+    if (!current || current.expiresAt <= this.now()) { this.json(res, 400, { error: this.help.none }); return; }
     if (typeof code !== 'string' || !sameText(code.trim(), current.value)) {
       current.attempts += 1;
       if (current.attempts >= CODE_ATTEMPTS) this.code = null;
-      this.json(res, 400, { error: this.code ? 'That code is not right. Check the computer and try again.' : 'Too many wrong codes. Create a new code on the computer.' });
+      this.json(res, 400, { error: this.code ? this.help.wrong : this.help.locked });
       return;
     }
     this.code = null;

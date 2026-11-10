@@ -104,6 +104,27 @@ test('pairing: 6-digit code, expires, locks after 5 wrong tries, and stores only
   assert.equal((await f.call('POST', '/api/pair', { code: good })).status, 400, 'a code works once');
 });
 
+test('the pairing screen and errors say where to get a code: the app by default, the CLI on a server', async t => {
+  const app = await fixture(t);
+  const appPage = (await app.call('GET', '/')).text;
+  assert.match(appPage, /Settings › Phone control › <strong>Pair a phone<\/strong>/);
+  assert.doesNotMatch(appPage, /\{\{PAIRING_HELP\}\}/);
+  assert.match((await app.call('POST', '/api/pair', { code: '000000' })).json.error, /“Pair a phone” on the computer/);
+
+  const server = await fixture(t, { codeSource: 'server' });
+  const serverPage = (await server.call('GET', '/')).text;
+  assert.match(serverPage, /run <code>node server\/main\.mjs pair<\/code>/);
+  assert.doesNotMatch(serverPage, /Settings › Phone control/);
+  assert.match((await server.call('POST', '/api/pair', { code: '000000' })).json.error, /Run “node server\/main\.mjs pair” on the server/);
+  const { code } = server.control.newPairingCode().pairing;
+  const wrong = code === '111111' ? '222222' : '111111';
+  assert.match((await server.call('POST', '/api/pair', { code: wrong })).json.error, /Check the server/);
+  for (let i = 0; i < 3; i++) await server.call('POST', '/api/pair', { code: wrong });
+  assert.match((await server.call('POST', '/api/pair', { code: wrong })).json.error, /Too many wrong codes\. Run “node server\/main\.mjs pair”/);
+
+  assert.throws(() => new PhoneControl({ codeSource: 'nope' }), /Unknown pairing code source/);
+});
+
 test('a paired phone can see status, set and restore through the controller; cross-site posts are refused', async t => {
   const f = await fixture(t);
   await f.call('POST', '/api/pair', { code: f.control.newPairingCode().pairing.code });

@@ -252,7 +252,7 @@ async function runServer() {
     network: wifiStatus, store: new Store(path.join(dataDir, 'settings.json')), routeJournal: new RouteJournal(path.join(dataDir, 'route.json')) });
   const geocoder = new Geocoder();
   const port = /^\d{4,5}$/.test(process.env.GHOST_PHONE_CONTROL_PORT || '') ? Number(process.env.GHOST_PHONE_CONTROL_PORT) : undefined;
-  const phoneControl = new PhoneControl({ controller, dataPath: path.join(dataDir, 'phone-control.json'), ...(port ? { port } : {}),
+  const phoneControl = new PhoneControl({ controller, dataPath: path.join(dataDir, 'phone-control.json'), codeSource: 'server', ...(port ? { port } : {}),
     dnsName: () => findSelfDnsName().catch(() => null),
     search: query => { geocoder.configure(controller.state.preferences.geocoderUrl || GEOCODER); return geocoder.search(query); } });
   const server = new GhostServer({ controller, phoneControl, alerts: new ConnectionAlerts(), socketPath: controlSocketPath(dataDir) });
