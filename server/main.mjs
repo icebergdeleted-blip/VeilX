@@ -30,6 +30,15 @@ export function legacyDataDirectory(env = process.env, home = homedir()) {
   return env.GHOST_DATA_DIR ? null : path.join(dataRoot(env, home), 'ghost');
 }
 
+/**
+ * Creates the data folder and limits it to this user every start: mkdir's mode applies only to a new
+ * folder, and the admin socket inside it must never be reachable by other users, even briefly.
+ */
+export async function secureDataDirectory(dir, { platform = process.platform, makeDir = mkdir, setMode = chmod } = {}) {
+  await makeDir(dir, { recursive: true, mode: 0o700 });
+  if (platform !== 'win32') await setMode(dir, 0o700);
+}
+
 /** The local admin socket. Only this user can open it (directory 0700, socket 0600). */
 export function controlSocketPath(dataDir, platform = process.platform) {
   // Windows has no Unix socket files; a per-directory named pipe keeps tests portable.
@@ -241,7 +250,7 @@ async function runServer() {
     import('../backend/android.mjs'), import('../backend/network.mjs'), import('../backend/route-journal.mjs'),
     import('../backend/alerts.mjs'), import('../backend/phone-control.mjs'), import('../backend/tailscale.mjs'), import('../backend/data-migration.mjs')]);
   const dataDir = dataDirectory();
-  await mkdir(dataDir, { recursive: true, mode: 0o700 });
+  await secureDataDirectory(dataDir);
   // Recovery records and pairings from a server run before the rename must not be lost.
   const copied = migrateLegacyData({ from: legacyDataDirectory(), to: dataDir });
   if (copied.length) console.info(`Copied ${copied.join(', ')} from the Ghost data folder.`);

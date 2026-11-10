@@ -5,7 +5,7 @@ import { EventEmitter } from 'node:events';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { COMMANDS, GhostServer, controlSocketPath, dataDirectory, legacyDataDirectory, requestAdmin } from '../server/main.mjs';
+import { COMMANDS, GhostServer, controlSocketPath, dataDirectory, legacyDataDirectory, requestAdmin, secureDataDirectory } from '../server/main.mjs';
 
 const quiet = { info() {}, warn() {}, error() {} };
 
@@ -62,6 +62,16 @@ test('the data folder follows GHOST_DATA_DIR, then XDG_DATA_HOME, then ~/.local/
   assert.equal(dataDirectory({ XDG_DATA_HOME: '/data' }, '/home/pi'), path.join(path.resolve('/data'), 'veilx'));
   assert.equal(dataDirectory({}, '/home/pi'), path.join('/home/pi', '.local', 'share', 'veilx'));
   assert.equal(controlSocketPath('/home/pi/.local/share/veilx', 'linux'), path.join('/home/pi/.local/share/veilx', 'control.sock'));
+});
+
+test('the data folder is limited to this user on every start, not only when it is created', async () => {
+  const calls = [];
+  const fakes = { makeDir: async (dir, options) => calls.push(['mkdir', dir, options.mode]), setMode: async (dir, mode) => calls.push(['chmod', dir, mode]) };
+  await secureDataDirectory('/home/pi/.local/share/veilx', { platform: 'linux', ...fakes });
+  assert.deepEqual(calls, [['mkdir', '/home/pi/.local/share/veilx', 0o700], ['chmod', '/home/pi/.local/share/veilx', 0o700]]);
+  calls.length = 0;
+  await secureDataDirectory('C:/data', { platform: 'win32', ...fakes });
+  assert.deepEqual(calls, [['mkdir', 'C:/data', 0o700]]);
 });
 
 test('a pre-rename Ghost server folder is the migration source, unless a data folder is set explicitly', () => {
