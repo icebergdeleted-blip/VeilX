@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { PhoneControl, isTailnetAddress, localTailscaleIPv4 } from '../backend/phone-control.mjs';
 
-const phone = { id: 'ios:00008140-000244AE1132801C', name: 'Test iPhone', state: 'ready', connection: 'remote' };
+const phone = { id: 'ios:00008140-0000000000000001', name: 'Test iPhone', state: 'ready', connection: 'remote' };
 
 function fakeController() {
   const calls = [];

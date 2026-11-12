@@ -7,7 +7,7 @@ import { Controller } from '../backend/controller.mjs';
 import { defaults } from '../backend/store.mjs';
 import { remoteHost } from '../backend/validation.mjs';
 
-const UDID = '00008140-000244AE1132801C';
+const UDID = '00008140-0000000000000001';
 const usbPhone = { id: `ios:${UDID}`, serial: UDID, platform: 'ios', name: 'Test iPhone', connection: 'usb', state: 'ready' };
 
 function harness() {

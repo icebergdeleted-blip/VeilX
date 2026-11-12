@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import ios_bridge as bridge_module
 
-PHONE = "00008140-000244AE1132801C"
+PHONE = "00008140-0000000000000001"
 
 
 def service(identifier=PHONE, name="Test iPhone"):
