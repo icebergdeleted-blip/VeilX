@@ -9,7 +9,7 @@ const status = peers => JSON.stringify({ BackendState: 'Running', Peer: Object.f
 
 test('Tailscale lookup lists only iPhones/iPads with a tailnet IPv4, online first, names cleaned', () => {
   const result = parseApplePeers(status([
-    { HostName: 'iPad', OS: 'iOS', Online: false, TailscaleIPs: ['100.122.108.51', 'fd7a:115c:a1e0::1'] },
+    { HostName: 'iPad', OS: 'iOS', Online: false, TailscaleIPs: ['100.64.0.50', 'fd7a:115c:a1e0::1'] },
     { HostName: "Alpha iPhone\u0007", OS: 'iOS', Online: true, TailscaleIPs: ['fd7a:115c:a1e0::2', '100.64.0.20'] },
     { HostName: 'example-pi', OS: 'linux', Online: true, TailscaleIPs: ['100.64.0.30'] },
     { HostName: 'odd', OS: 'iOS', Online: true, TailscaleIPs: ['8.8.8.8', '100.200.0.1'] }, // not in 100.64.0.0/10
@@ -18,7 +18,7 @@ test('Tailscale lookup lists only iPhones/iPads with a tailnet IPv4, online firs
   assert.deepEqual(result, [
     { name: "Alpha iPhone", ip: '100.64.0.20', online: true },
     { name: 'Apple device', ip: '100.64.0.9', online: true },
-    { name: 'iPad', ip: '100.122.108.51', online: false },
+    { name: 'iPad', ip: '100.64.0.50', online: false },
   ]);
   assert.throws(() => parseApplePeers('{'), /unreadable/);
   assert.throws(() => parseApplePeers(JSON.stringify({ BackendState: 'NeedsLogin' })), /not connected/);
@@ -72,7 +72,7 @@ test('alerts: no automatic retry is worded honestly; Restore, phone changes and 
 });
 
 test('a dropped remote session keeps retrying and resumes the same phone and point when it answers again', async () => {
-  const UDID = '00008140-000244AE1132801C';
+  const UDID = '00008140-0000000000000001';
   const phone = { id: `ios:${UDID}`, serial: UDID, platform: 'ios', name: 'iPhone', connection: 'remote', state: 'ready' };
   const data = defaults(); Object.assign(data.preferences, { connection: 'remote', remoteHost: '100.64.0.9', remoteUdid: UDID });
   const store = { load: async () => structuredClone(data), save: async value => Object.assign(data, structuredClone(value)) };
