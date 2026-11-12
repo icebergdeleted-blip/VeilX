@@ -49,9 +49,9 @@ async function fixture(t, options = {}) {
 }
 
 test('tailnet address checks accept only Tailscale ranges', () => {
-  for (const ip of ['100.64.0.1', '100.123.126.110', '100.127.255.254', '::ffff:100.100.1.1', 'fd7a:115c:a1e0::5']) assert.equal(isTailnetAddress(ip), true, ip);
+  for (const ip of ['100.64.0.1', '100.64.0.20', '100.127.255.254', '::ffff:100.100.1.1', 'fd7a:115c:a1e0::5']) assert.equal(isTailnetAddress(ip), true, ip);
   for (const ip of ['100.63.0.1', '100.128.0.1', '192.168.1.5', '127.0.0.1', '10.0.0.1', 'fe80::1', '', null]) assert.equal(isTailnetAddress(ip), false, String(ip));
-  assert.equal(localTailscaleIPv4(() => ({ Wi: [{ family: 'IPv4', internal: false, address: '10.101.0.5' }], Tailscale: [{ family: 'IPv4', internal: false, address: '100.79.113.80' }] })), '100.79.113.80');
+  assert.equal(localTailscaleIPv4(() => ({ Wi: [{ family: 'IPv4', internal: false, address: '10.101.0.5' }], Tailscale: [{ family: 'IPv4', internal: false, address: '100.64.0.40' }] })), '100.64.0.40');
   assert.equal(localTailscaleIPv4(() => ({ Wi: [{ family: 'IPv4', internal: false, address: '10.101.0.5' }] })), null);
 });
 
