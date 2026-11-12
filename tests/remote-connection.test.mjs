@@ -22,7 +22,7 @@ function harness() {
 }
 
 test('remote address must be an IP literal: no names, ports or URLs', () => {
-  assert.equal(remoteHost(' 100.123.126.110 '), '100.123.126.110');
+  assert.equal(remoteHost(' 100.64.0.20 '), '100.64.0.20');
   assert.equal(remoteHost('fd7a:115c:a1e0::1'), 'fd7a:115c:a1e0::1');
   for (const bad of ['', 'phone.ts.net', '100.64.0.1:49152', 'http://100.64.0.1', null, 42, '1'.repeat(80)]) {
     assert.throws(() => remoteHost(bad), /remote IP address/);
@@ -33,10 +33,10 @@ test('remote discovery asks only the configured phone at the configured address'
   const h = harness(); h.adapter.connection = 'remote';
   assert.deepEqual(await h.adapter.list(), [], 'unconfigured remote never probes the network');
   assert.equal(h.requests.length, 0);
-  h.adapter.remote = { host: '100.123.126.110', udid: UDID };
+  h.adapter.remote = { host: '100.64.0.20', udid: UDID };
   const listing = h.adapter.list();
   await new Promise(setImmediate);
-  assert.deepEqual(h.requests[0].params, { connection: 'remote', host: '100.123.126.110', udid: UDID });
+  assert.deepEqual(h.requests[0].params, { connection: 'remote', host: '100.64.0.20', udid: UDID });
   const remotePhone = { ...usbPhone, connection: 'remote' };
   h.reply(h.requests[0], [remotePhone, { ...usbPhone, connection: 'usb' }]);
   assert.deepEqual(await listing, [remotePhone]);
@@ -47,10 +47,10 @@ test('remote commands carry the host and refuse a phone that was not set up', as
   const h = harness(); h.adapter.connection = 'remote';
   const remotePhone = { ...usbPhone, connection: 'remote' };
   assert.throws(() => h.adapter.deviceParams(remotePhone), /Set up remote access/);
-  h.adapter.remote = { host: '100.123.126.110', udid: 'SOMEOTHERPHONE01' };
+  h.adapter.remote = { host: '100.64.0.20', udid: 'SOMEOTHERPHONE01' };
   assert.throws(() => h.adapter.deviceParams(remotePhone), /Set up remote access/);
-  h.adapter.remote = { host: '100.123.126.110', udid: UDID };
-  assert.deepEqual(h.adapter.deviceParams(remotePhone), { udid: UDID, connection: 'remote', host: '100.123.126.110' });
+  h.adapter.remote = { host: '100.64.0.20', udid: UDID };
+  assert.deepEqual(h.adapter.deviceParams(remotePhone), { udid: UDID, connection: 'remote', host: '100.64.0.20' });
 });
 
 test('remote access setup is USB-only', async () => {
@@ -73,14 +73,14 @@ async function controllerFixture(preferences = {}) {
 test('remote connection needs setup and an address; settings reach the adapter', async () => {
   const f = await controllerFixture();
   await assert.rejects(f.c.setConnection('remote'), /Set up remote access/);
-  await f.c.updatePreferences({ remoteHost: '100.123.126.110' });
-  assert.equal(f.data.preferences.remoteHost, '100.123.126.110');
-  assert.deepEqual(f.ios.remote, { host: '100.123.126.110', udid: null });
+  await f.c.updatePreferences({ remoteHost: '100.64.0.20' });
+  assert.equal(f.data.preferences.remoteHost, '100.64.0.20');
+  assert.deepEqual(f.ios.remote, { host: '100.64.0.20', udid: null });
   await assert.rejects(f.c.setConnection('remote'), /Set up remote access/);
   await f.c.pairRemote(usbPhone.id);
   assert.deepEqual(f.calls, [['pairRemote', usbPhone.id]]);
   assert.equal(f.data.preferences.remoteUdid, UDID);
-  assert.deepEqual(f.ios.remote, { host: '100.123.126.110', udid: UDID });
+  assert.deepEqual(f.ios.remote, { host: '100.64.0.20', udid: UDID });
   f.ios.list = async () => [];
   await f.c.setConnection('remote');
   assert.equal(f.ios.connection, 'remote');

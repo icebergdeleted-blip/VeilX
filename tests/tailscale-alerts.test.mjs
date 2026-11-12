@@ -10,13 +10,13 @@ const status = peers => JSON.stringify({ BackendState: 'Running', Peer: Object.f
 test('Tailscale lookup lists only iPhones/iPads with a tailnet IPv4, online first, names cleaned', () => {
   const result = parseApplePeers(status([
     { HostName: 'iPad', OS: 'iOS', Online: false, TailscaleIPs: ['100.122.108.51', 'fd7a:115c:a1e0::1'] },
-    { HostName: "Alrex's iphone\u0007", OS: 'iOS', Online: true, TailscaleIPs: ['fd7a:115c:a1e0::2', '100.123.126.110'] },
-    { HostName: 'alexrpi', OS: 'linux', Online: true, TailscaleIPs: ['100.81.200.95'] },
+    { HostName: "Alpha iPhone\u0007", OS: 'iOS', Online: true, TailscaleIPs: ['fd7a:115c:a1e0::2', '100.64.0.20'] },
+    { HostName: 'example-pi', OS: 'linux', Online: true, TailscaleIPs: ['100.64.0.30'] },
     { HostName: 'odd', OS: 'iOS', Online: true, TailscaleIPs: ['8.8.8.8', '100.200.0.1'] }, // not in 100.64.0.0/10
     { HostName: '', OS: 'ios', Online: true, TailscaleIPs: ['100.64.0.9'] },
   ]));
   assert.deepEqual(result, [
-    { name: "Alrex's iphone", ip: '100.123.126.110', online: true },
+    { name: "Alpha iPhone", ip: '100.64.0.20', online: true },
     { name: 'Apple device', ip: '100.64.0.9', online: true },
     { name: 'iPad', ip: '100.122.108.51', online: false },
   ]);
@@ -98,7 +98,7 @@ test('a dropped remote session keeps retrying and resumes the same phone and poi
 
 test('the computer’s MagicDNS name is read safely', async () => {
   const { parseSelfDnsName } = await import('../backend/tailscale.mjs');
-  assert.equal(parseSelfDnsName(JSON.stringify({ Self: { DNSName: 'AlexRVivobook.tail1234.ts.net.' } })), 'alexrvivobook.tail1234.ts.net');
+  assert.equal(parseSelfDnsName(JSON.stringify({ Self: { DNSName: 'ExampleLaptop.tail1234.ts.net.' } })), 'examplelaptop.tail1234.ts.net');
   for (const bad of ['', 'x', 'evil.com:80', 'a b.ts.net', '<script>.ts.net']) assert.equal(parseSelfDnsName(JSON.stringify({ Self: { DNSName: bad } })), null, bad);
   assert.equal(parseSelfDnsName('{'), null);
 });

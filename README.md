@@ -46,6 +46,23 @@ The downloads include the phone runtimes. No programming tools or VeilX account 
 - Honest disconnected/error states: lost connectivity never means “restored”.
 - No account, telemetry, analytics, or cloud location history.
 
+## Intended use and no warranty
+
+VeilX is a developer and testing tool. It lets you check how apps and websites behave at
+different locations, test location-based features without traveling, and demo routes. It uses
+the same developer location-simulation services that Xcode and Android development tools use.
+
+Use it only on devices you own or are allowed to test, and follow the terms of the apps and
+services you use. Many apps and games forbid location spoofing. Do not use VeilX to cheat, to
+fake attendance or work check-ins, to get around geographic restrictions, or to mislead or harm
+other people. You are responsible for how you use it.
+
+VeilX is free software provided **without any warranty**, as described in sections 15 and 16 of
+the [GPL-3.0](LICENSE). The releases are unsigned pre-releases. Always use **Restore** when you
+are done: after an unplug, crash, or force-quit a phone can keep its simulated location for a
+while (Android's helper can keep supplying it without the cable). See
+[Session behavior](#session-behavior).
+
 ## Development
 
 Use Node.js 24 LTS and npm. Python 3.12 or 3.13 is needed only to **build** the iPhone
