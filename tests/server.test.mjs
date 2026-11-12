@@ -33,7 +33,7 @@ function fakePhoneControl({ failures = 0 } = {}) {
       this.attempts++;
       if (this.attempts <= failures) throw new Error('Tailscale is not connected on this computer.');
       this.running = true;
-      return { url: 'http://pi.tailnet.ts.net:7420', ipUrl: 'http://100.81.200.95:7420' };
+      return { url: 'http://pi.tailnet.ts.net:7420', ipUrl: 'http://100.64.0.30:7420' };
     },
     async stop() { this.running = false; return {}; },
     status() { return { enabled: this.running }; },
@@ -154,7 +154,7 @@ function setupController(devices) {
     async prepareDevice(id) { this.calls.push(['prepare', id]); },
     async pairRemote(id) { this.calls.push(['pairRemote', id]); this.state.preferences.remoteUdid = id.slice(4); },
     async updatePreferences(value) { this.state.preferences = { ...this.state.preferences, ...value }; },
-    async findTailscalePhones() { return [{ name: 'iPhone', ip: '100.123.126.110', online: true }]; },
+    async findTailscalePhones() { return [{ name: 'iPhone', ip: '100.64.0.20', online: true }]; },
   });
   return controller;
 }
@@ -182,8 +182,8 @@ test('remote setup needs a USB iPhone, then the address and connection are set f
   await assert.rejects(server.command('setup-remote'), /No phone found/); // Android and Wi-Fi iPhones are skipped
   controller.state.devices = [pixel, iphone];
   assert.equal((await server.command('setup-remote')).remoteUdid, 'UDID1');
-  assert.equal((await server.command('find-iphones')).iphones[0].ip, '100.123.126.110');
-  assert.equal((await server.command('remote-address', '100.123.126.110')).remoteHost, '100.123.126.110');
+  assert.equal((await server.command('find-iphones')).iphones[0].ip, '100.64.0.20');
+  assert.equal((await server.command('remote-address', '100.64.0.20')).remoteHost, '100.64.0.20');
   assert.equal((await server.command('connection', 'remote')).connection, 'remote');
   await assert.rejects(server.command('connection', 'bluetooth'), /Choose USB, Wi-Fi or remote/);
 });
@@ -206,7 +206,7 @@ test('admin requests carry arguments and long commands get long client timeouts'
   const server = new GhostServer({ controller, phoneControl: fakePhoneControl(), log: quiet, socketPath, ...manualTimers() });
   try {
     await server.start();
-    assert.equal((await requestAdmin(socketPath, 'remote-address 100.123.126.110')).remoteHost, '100.123.126.110');
+    assert.equal((await requestAdmin(socketPath, 'remote-address 100.64.0.20')).remoteHost, '100.64.0.20');
     assert.equal((await requestAdmin(socketPath, 'connection wifi')).connection, 'wifi');
   } finally {
     await server.stop();

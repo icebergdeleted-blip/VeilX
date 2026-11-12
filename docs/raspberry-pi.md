@@ -57,7 +57,7 @@ runs straight from `sidecar/.venv`.
 npm run server
 ```
 
-It prints the phone page address, for example `http://alexrpi.tailnet.ts.net:7420`. If Tailscale
+It prints the phone page address, for example `http://raspberrypi.tailnet.ts.net:7420`. If Tailscale
 isn't connected yet, it says so and retries every 15 seconds. Leave it running and open a second
 SSH session for the next steps. Stop it with Ctrl+C.
 
