@@ -183,3 +183,29 @@ test('search returns label and coordinates only', async t => {
   await f.call('POST', '/api/pair', { code: f.control.newPairingCode().pairing.code });
   assert.deepEqual((await f.call('GET', '/api/search?q=liberty')).json, [{ label: 'Statue of Liberty', latitude: 40.689247, longitude: -74.044502 }]);
 });
+
+test('phone control keeps trying until Tailscale is connected, and stop() ends the trying', async t => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'ghost-phone-'));
+  let address = null; const started = [];
+  const control = new PhoneControl({ controller: fakeController(), dataPath: path.join(dir, 'phone-control.json'), port: 0, address: () => address, allowAddress: () => true });
+  t.after(async () => { await control.stop(); await rm(dir, { recursive: true, force: true }); });
+  await control.keepStarting({ retryMs: 20, onStart: status => started.push(status.enabled) });
+  assert.equal(control.status().enabled, false);
+  assert.match(control.status().error, /Tailscale is not connected/);
+  address = '127.0.0.1'; // Tailscale comes up later
+  for (let i = 0; i < 100 && !started.length; i++) await new Promise(resolve => setTimeout(resolve, 10));
+  assert.deepEqual(started, [true]);
+  assert.equal(control.status().error, null);
+
+  await control.stop(); address = null;
+  await control.keepStarting({ retryMs: 20 });
+  await control.stop(); address = '127.0.0.1';
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert.equal(control.status().enabled, false, 'no retry after stop()');
+
+  let wanted = true; address = null;
+  await control.keepStarting({ retryMs: 20, wanted: () => wanted });
+  wanted = false; address = '127.0.0.1';
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert.equal(control.status().enabled, false, 'no start once it is no longer wanted');
+});

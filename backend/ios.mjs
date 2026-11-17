@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { createInterface } from 'node:readline';
 
+const REMOTE_PROBE_MAX_MS = 30_000;
 const label = connection => connection === 'remote' ? 'remote (Tailscale)' : connection === 'wifi' ? 'Wi-Fi' : 'USB';
 
 /** Persistent, private stdio bridge. No shell, network listener, or implicit device selection. */
@@ -29,6 +30,9 @@ export class IosAdapter {
     this.stderr = '';
     // "remote" connection: the iPhone's IP literal (e.g. Tailscale 100.x) and which phone it is.
     this.remote = { host: null, udid: null };
+    // Remote has no discovery, only a direct question to one address that can take many seconds
+    // to go unanswered. A silent phone is asked less and less often (see list()).
+    this.remoteProbe = { key: null, misses: 0, retryAt: 0 };
   }
 
   runtime() {
@@ -189,11 +193,24 @@ export class IosAdapter {
     if (params.connection === 'remote') {
       // Remote has no discovery: ask exactly the configured phone at exactly the configured address.
       if (!this.remote.host || !this.remote.udid) return [];
+      const key = `${this.remote.host}|${this.remote.udid}`;
+      if (this.remoteProbe.key !== key) this.remoteProbe = { key, misses: 0, retryAt: 0 };
+      if (this.now() < this.remoteProbe.retryAt) return [];
       params = {...params, host: this.remote.host, udid: this.remote.udid};
     }
-    const devices = await this.request('discover', params, params.connection === 'usb' ? 30000 : 40000);
-    return devices.filter((device) => device.platform === 'ios' && device.connection === (this.connection || 'usb'));
+    const remote = params.connection === 'remote' ? this.remoteProbe : null;
+    let devices = [];
+    try {
+      devices = (await this.request('discover', params, params.connection === 'usb' ? 30000 : 40000))
+        .filter((device) => device.platform === 'ios' && device.connection === (this.connection || 'usb'));
+    } finally {
+      if (remote && devices.length) Object.assign(remote, { misses: 0, retryAt: 0 });
+      else if (remote) remote.retryAt = this.now() + Math.min(REMOTE_PROBE_MAX_MS, 2000 * 2 ** remote.misses++);
+    }
+    return devices;
   }
+  /** Ask the remote phone on the next scan, whatever the wait (Refresh, or a session waiting to reconnect). */
+  probeNow() { this.remoteProbe.retryAt = 0; }
   async prepareWifi(device) {
     await this.enableWifi(device);
     await this.pairRemote(device); // iOS 27 network tunnels need a RemotePairing record.

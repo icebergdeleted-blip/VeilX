@@ -72,6 +72,7 @@ export class PhoneControl extends EventEmitter {
     Object.assign(this, { controller, dataPath, port, address, now, allowAddress, dnsName, search });
     this.server = null; this.host = null; this.error = null; this.name = null; this.lastSearchAt = -Infinity;
     this.code = null; this.sessions = []; this.loaded = false; this.lastCommandAt = -Infinity;
+    this.retryTimer = null;
   }
 
   /** Host headers this server answers to: the Tailscale IP and, if known, the MagicDNS name. */
@@ -109,7 +110,7 @@ export class PhoneControl extends EventEmitter {
     if (this.server) return this.status();
     const host = this.address();
     if (!host) {
-      this.error = 'Tailscale is not connected on this computer. Open Tailscale and sign in, then turn phone control on again.';
+      this.error = 'Tailscale is not connected on this computer. Open Tailscale and sign in.';
       throw new Error(this.error);
     }
     const server = createServer((req, res) => {
@@ -127,7 +128,23 @@ export class PhoneControl extends EventEmitter {
     return this.status();
   }
 
+  /**
+   * Start now, or keep trying until Tailscale is connected (it may come up after VeilX does).
+   * Trying ends on success, when `wanted()` turns false, or with stop().
+   */
+  async keepStarting({ wanted = () => true, retryMs = 15_000, onStart = () => {} } = {}) {
+    clearTimeout(this.retryTimer); this.retryTimer = null;
+    if (!wanted()) return;
+    try { onStart(await this.start()); }
+    catch {
+      if (!wanted()) return;
+      this.retryTimer = setTimeout(() => { this.keepStarting({ wanted, retryMs, onStart }); }, retryMs);
+      this.retryTimer.unref?.();
+    }
+  }
+
   async stop() {
+    clearTimeout(this.retryTimer); this.retryTimer = null;
     const server = this.server;
     this.server = null; this.code = null;
     if (server) await new Promise(resolve => { server.close(() => resolve()); server.closeAllConnections?.(); });

@@ -111,7 +111,7 @@ async function boot() {
     search: query => { geocoder.configure(controller.state.preferences.geocoderUrl || 'https://photon.komoot.io/api/'); return geocoder.search(query); } });
   phoneControl.on('paired', () => {
     showAlert({ kind: 'paired', title: 'Phone paired with VeilX', body: 'A phone can now control locations over Tailscale. Remove access anytime in Settings › Phone control.' });
-    if (window && !window.isDestroyed()) window.webContents.send('ghost:phone-control', phoneControl.status());
+    if (window && !window.isDestroyed()) window.webContents.send('ghost:phone-control', { ...phoneControl.status(), event: 'paired' });
   });
   controller.on('state', state => {
     applyTheme(state.preferences?.theme);
@@ -125,7 +125,7 @@ async function boot() {
     switchToWifi: id => controller.switchToWifi(id),
     setConnection: value => controller.setConnection(value),
     connectWifi: value => controller.connectWifi(value),
-    scanDevices: () => controller.scanDevices(),
+    scanDevices: () => controller.scanDevices({ force: true }),
     prepareDevice: id => controller.prepareDevice(id),
     pairRemote: id => controller.pairRemote(id),
     findTailscalePhones: () => controller.findTailscalePhones(),
@@ -223,10 +223,11 @@ async function boot() {
   let tilesApplying = null;
   controller.once('loaded', state => { applyTheme(state.preferences.theme); tilesApplying = applyTileSource(state.preferences); });
   try { await controller.init(); } finally { applyTheme(controller.state.preferences.theme); await (tilesApplying ?? applyTileSource(controller.state.preferences)); }
-  if (controller.state.preferences.phoneControlEnabled) {
-    // Start only on Tailscale; if it is not up yet, Settings shows why and offers to retry.
-    phoneControl.start().catch(() => {});
-  }
+  // Start only on Tailscale. If it is not connected yet, keep trying; Settings shows why meanwhile.
+  phoneControl.keepStarting({
+    wanted: () => !quitPending && !quitting && controller.state.preferences.phoneControlEnabled === true,
+    onStart: status => { if (window && !window.isDestroyed()) window.webContents.send('ghost:phone-control', { ...status, event: 'started' }); },
+  });
   controller.notify();
   poll = setInterval(() => controller.scanDevices().catch(error => { controller.state.warning = error.message; controller.notify(); }), 2000);
   powerMonitor.on('suspend', () => controller.suspend().catch(() => {}));

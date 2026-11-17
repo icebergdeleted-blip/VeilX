@@ -406,3 +406,35 @@ test('Wi-Fi handoff preflight bypasses the USB cache and requires the same ready
     assert.equal(h.adapter.connection, 'usb'); h.child.kill();
   }
 });
+
+test('a remote phone that does not answer is asked less often; Refresh asks at once', async () => {
+  let time = 1_000_000;
+  const h = harness(() => {}, () => {}, { now: () => time });
+  h.adapter.connection = 'remote';
+  h.adapter.remote = { host: '100.64.0.9', udid: device.serial };
+  const ask = async (found = []) => {
+    const before = h.requests.length, listing = h.adapter.list();
+    await new Promise(setImmediate);
+    if (h.requests.length === before) return { asked: false, devices: await listing };
+    h.reply(h.requests.at(-1), found);
+    return { asked: true, devices: await listing };
+  };
+  assert.equal((await ask()).asked, true);
+  assert.deepEqual(h.requests[0].params, { connection: 'remote', host: '100.64.0.9', udid: device.serial });
+  time += 1999; assert.deepEqual(await ask(), { asked: false, devices: [] });
+  time += 1; assert.equal((await ask()).asked, true);       // 2 s after the first miss
+  time += 3999; assert.equal((await ask()).asked, false);
+  time += 1; assert.equal((await ask()).asked, true);       // then 4 s
+  for (let i = 0; i < 6; i++) { time += 30_000; assert.equal((await ask()).asked, true); }
+  time += 29_999; assert.equal((await ask()).asked, false, 'the wait never exceeds 30 s');
+  h.adapter.probeNow(); assert.equal((await ask()).asked, true);
+
+  const remote = { ...device, connection: 'remote', state: 'ready' };
+  time += 30_000;
+  assert.deepEqual((await ask([remote])).devices, [remote]);
+  time += 1; assert.equal((await ask([remote])).asked, true, 'an answering phone is asked on every scan');
+
+  await ask(); h.adapter.remote = { host: '100.64.0.10', udid: device.serial };
+  assert.equal((await ask()).asked, true, 'a new address is tried at once');
+  h.child.kill();
+});

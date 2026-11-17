@@ -715,7 +715,7 @@ function renderPhoneControl(status = phoneControlStatus) {
     $('#phone-control-qr').dataset.url = pairing.url;
   }
   $('#phone-control-info').textContent = on ? `${phoneControlStatus.phones || 0} phone${phoneControlStatus.phones === 1 ? '' : 's'} paired. Commands from the phone work like the buttons here.` : '';
-  $('#phone-control-error').textContent = state.preferences.phoneControlEnabled && !on ? (phoneControlStatus.error || 'Phone control is waiting for Tailscale. Turn it off and on again once Tailscale is connected.') : '';
+  $('#phone-control-error').textContent = state.preferences.phoneControlEnabled && !on ? `${phoneControlStatus.error || 'Phone control is waiting for Tailscale.'} VeilX keeps trying.` : '';
 }
 async function phoneControlAction(action, success) {
   const status = await runOperation(() => api.phoneControl(action), success);
@@ -726,7 +726,7 @@ $('#phone-control-toggle').onchange = () => phoneControlAction($('#phone-control
 $('#phone-control-pair').onclick = () => phoneControlAction('pair');
 $('#phone-control-revoke').onclick = () => phoneControlAction('revoke', 'All phones were signed out.');
 $('#phone-control-copy').onclick = () => { navigator.clipboard?.writeText(phoneControlStatus.url || '').then(() => notify('Address copied.'), () => {}); };
-if (api.onPhoneControl) api.onPhoneControl(status => { renderPhoneControl(status); notify('A phone was paired with VeilX.'); });
+if (api.onPhoneControl) api.onPhoneControl(status => { renderPhoneControl(status); if (status?.event === 'paired') notify('A phone was paired with VeilX.'); });
 $('#settings-button').onclick = () => {
   if (api.phoneControl && !isPreview) api.phoneControl('status').then(renderPhoneControl, () => {}); $('#provider-url').value = state.preferences.geocoderUrl || 'https://photon.komoot.io/api/'; $('#routing-url').value = state.preferences.routingUrl || 'https://router.project-osrm.org/'; renderTileStatus(); renderRuntime(); paintIcons(); $('#settings-dialog').showModal(); };
 $('#scan-button').onclick = () => runOperation(() => api.scanDevices(), 'Device list refreshed.');

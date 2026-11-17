@@ -523,3 +523,29 @@ test('a fixed location is remembered as a recent place', async () => {
   await c.applyLocation(point);
   assert.deepEqual(c.state.recentPlaces.map(item => item.label), ['Equator']);
 });
+test('the computer Wi-Fi check runs only while a live USB session could be offered Wi-Fi', async () => {
+  let checks = 0, timestamp = 0, devices = [structuredClone(phone)];
+  const data = defaults();
+  const store = { load: async () => structuredClone(data), save: async () => {} };
+  const adapter = { status: async () => ({ available: true }), list: async () => devices, set: async () => ({}), clear: async () => ({}), dispose: async () => {} };
+  const c = new Controller({ adapters: { android: adapter }, store, now: () => timestamp, network: async () => { checks++; return { wifi: true }; } });
+  await c.init(); timestamp += 60_000; await c.scanDevices();
+  assert.equal(checks, 0, 'no session: nothing to offer');
+  await c.applyLocation(point); await c.scanDevices();
+  assert.equal(checks, 1); assert.deepEqual(c.state.network, { wifi: true });
+  timestamp += 5000; await c.scanDevices(); assert.equal(checks, 1, 'at most every 15 s');
+  timestamp += 15_000; await c.scanDevices(); assert.equal(checks, 2);
+  await c.stopLocation(); timestamp += 60_000; await c.scanDevices();
+  assert.equal(checks, 2, 'restored: no more checks');
+});
+test('Refresh and a session waiting to reconnect skip the wait for a silent phone', async () => {
+  const { c, adapter, disconnect, advance } = await fixture();
+  let probes = 0; adapter.probeNow = () => { probes++; };
+  await c.scanDevices(); assert.equal(probes, 0, 'ordinary polling respects the wait');
+  await c.scanDevices({ force: true }); assert.equal(probes, 1);
+  await c.applyLocation(point); disconnect(); await c.scanDevices(); advance(7000); await c.scanDevices();
+  assert.equal(c.state.session.status, 'waiting');
+  probes = 0; await c.scanDevices(); assert.equal(probes, 1);
+  await assert.rejects(c.stopLocation()); // Restore cancels automatic reconnect
+  probes = 0; await c.scanDevices(); assert.equal(probes, 0);
+});

@@ -132,10 +132,13 @@ export class Controller extends EventEmitter {
     finally { this.state.busy = false; this.notify(); }
     return this.snapshot();
   }
-  async scanDevices() {
+  /** `force`: the user asked (Refresh), so skip any wait an adapter applies to a phone that is not answering. */
+  async scanDevices({ force = false } = {}) {
     if (this.closing) return this.snapshot();
     if (this.scanning) return this.scanning;
     if (this.state.busy) return this.snapshot();
+    // A session waiting to reconnect must not wait either: the phone drops the location about a minute after the link.
+    if (force || this.canResume()) for (const adapter of Object.values(this.adapters)) adapter.probeNow?.();
     this.scanning = this.scan();
     try { await this.scanning; } finally { this.scanning = null; }
     await this.reconnectIfNeeded();
@@ -143,7 +146,10 @@ export class Controller extends EventEmitter {
   }
   async scan() {
     const previousDevices = this.state.devices;
-    if (this.now() - this.networkCheckedAt >= 15000) {
+    // The computer's Wi-Fi state only feeds the "Switch to Wi-Fi?" offer, which needs a live USB session.
+    const session = this.state.session;
+    const wifiOfferPossible = (this.state.preferences.connection || 'usb') === 'usb' && session?.status === 'active' && (session.connection || 'usb') === 'usb';
+    if (wifiOfferPossible && this.now() - this.networkCheckedAt >= 15000) {
       this.networkCheckedAt = this.now();
       this.state.network = await this.network().catch(() => ({wifi: false}));
     }
