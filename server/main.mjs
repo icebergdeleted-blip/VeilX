@@ -72,7 +72,7 @@ export class GhostServer {
   constructor({ controller, phoneControl, alerts = null, log = console, socketPath, pollMs = 2000, retryMs = RETRY_MS,
     busyWaitMs = BUSY_WAIT_MS, setTimer = setTimeout, clearTimer = clearTimeout, setRepeat = setInterval, clearRepeat = clearInterval } = {}) {
     Object.assign(this, { controller, phoneControl, alerts, log, socketPath, pollMs, retryMs, busyWaitMs, setTimer, clearTimer, setRepeat, clearRepeat });
-    this.poll = null; this.retry = null; this.admin = null; this.stopping = null;
+    this.poll = null; this.retry = null; this.admin = null; this.stopping = null; this.adminSockets = new Set();
   }
 
   async start() {
@@ -171,6 +171,8 @@ export class GhostServer {
       await rm(this.socketPath, { force: true });
     }
     const server = createServer(socket => {
+      this.adminSockets.add(socket);
+      socket.on('close', () => this.adminSockets.delete(socket));
       let input = '';
       socket.setEncoding('utf8');
       socket.setTimeout(5000, () => socket.destroy()); // only until the request line arrives
@@ -202,7 +204,9 @@ export class GhostServer {
     if (this.retry) this.clearTimer(this.retry);
     this.clearRepeat(this.poll);
     await this.phoneControl.stop().catch(() => {});
-    if (this.admin) await new Promise(resolve => this.admin.close(() => resolve()));
+    // Refuse new admin commands, but do not wait here for one that is still running (Prepare can
+    // take minutes): restoring the phone below must not depend on it finishing.
+    const adminClosed = this.admin ? new Promise(resolve => this.admin.close(() => resolve())) : null;
     const deadline = Date.now() + this.busyWaitMs;
     while (this.controller.state.busy && Date.now() < deadline) await new Promise(resolve => this.setTimer(resolve, 250));
     const { controller } = this;
@@ -220,6 +224,8 @@ export class GhostServer {
         error: 'VeilX stopped without confirming restoration. Reconnect this phone and choose Retry location or Restore.' });
     }
     await Promise.race([controller.dispose({ restore: false }), new Promise(resolve => this.setTimer(resolve, 6000))]);
+    for (const socket of this.adminSockets) socket.destroy();
+    await adminClosed;
   }
 }
 

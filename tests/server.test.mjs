@@ -146,6 +146,28 @@ test('the local admin socket answers pair and status, and refuses a second serve
   }
 });
 
+test('stopping restores the phone even while an admin command is still running', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'ghost-server-'));
+  const socketPath = controlSocketPath(dir);
+  const controller = fakeController({ session: { deviceId: 'ios:00008140-0000000000000001', status: 'active' } });
+  let scanning; const scanStarted = new Promise(resolve => { scanning = resolve; });
+  controller.scanDevices = () => { scanning(); return new Promise(() => {}); }; // a command that never finishes
+  const server = new GhostServer({ controller, phoneControl: fakePhoneControl(), log: quiet, socketPath, ...manualTimers() });
+  try {
+    await server.start();
+    const hanging = requestAdmin(socketPath, 'devices', 60_000).catch(error => error);
+    await scanStarted;
+    await server.stop();
+    assert.ok(controller.calls.includes('stopLocation'), 'Restore was sent');
+    assert.equal(controller.state.session, null);
+    assert.ok(await hanging instanceof Error, 'the unfinished command is cut off, not answered');
+    await assert.rejects(requestAdmin(socketPath, 'status', 1000));
+  } finally {
+    await server.stop();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 function setupController(devices) {
   const controller = fakeController();
   Object.assign(controller.state, { devices, preferences: { restoreOnQuit: true, connection: 'usb' } });

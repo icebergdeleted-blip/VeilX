@@ -7,6 +7,8 @@
   remote-address, connection, restore) runs from a local command line over SSH. Includes a
   systemd installer and `docs/raspberry-pi.md`.
 - Detect Linux Wi-Fi interfaces.
+- Server: stopping no longer waits for a running admin command (such as Prepare) before it
+  restores the phone. Checked by the automated tests only.
 
 ## 0.3.0 (pre-release)
 
