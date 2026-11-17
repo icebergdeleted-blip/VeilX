@@ -549,3 +549,25 @@ test('Refresh and a session waiting to reconnect skip the wait for a silent phon
   await assert.rejects(c.stopLocation()); // Restore cancels automatic reconnect
   probes = 0; await c.scanDevices(); assert.equal(probes, 0);
 });
+test('an iPhone setup does not start the Android tools, unless an Android record is unresolved', async () => {
+  const used = [];
+  const make = name => ({ status: async () => { used.push(name); return { available: true }; }, list: async () => [], dispose: async () => {} });
+  const build = async saved => {
+    const store = { load: async () => structuredClone(saved), save: async () => {} };
+    const c = new Controller({ adapters: { ios: make('ios'), android: make('android') }, store });
+    used.length = 0; await c.init(); return c;
+  };
+  const saved = defaults();
+  await build(saved);
+  assert.deepEqual(used.sort(), ['android', 'ios'], 'before setup is chosen, both are checked');
+  saved.preferences.phonePlatform = 'ios';
+  const c = await build(saved);
+  assert.deepEqual(used, ['ios']);
+  assert.equal(c.state.runtime.android.available, false);
+  assert.equal(c.state.runtime.android.unused, true);
+  await build({ ...saved, session: { id: 's', deviceId: 'android:USB123', serial: 'USB123', platform: 'android', latitude: 1, longitude: 2, status: 'active' } });
+  assert.deepEqual(used.sort(), ['android', 'ios'], 'an Android phone that may still be simulating can be restored');
+  saved.preferences.phonePlatform = 'android';
+  await build(saved);
+  assert.deepEqual(used.sort(), ['android', 'ios']);
+});

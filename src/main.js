@@ -519,7 +519,7 @@ function renderSession() {
 function renderRuntime() {
   setContent('#runtime-status', ['ios', 'android'].map((platform) => {
     const runtime = state.runtime?.[platform] || {};
-    return `<div class="runtime-row"><div>${icon('smartphone')}<span><strong>${platformName(platform)}</strong><small>${esc(runtime.message || 'Tools have not been checked yet.')}</small></span></div><span class="runtime-tag ${runtime.available ? 'available' : ''}">${runtime.available ? 'Ready' : 'Setup needed'}</span></div>`;
+    return `<div class="runtime-row"><div>${icon('smartphone')}<span><strong>${platformName(platform)}</strong><small>${esc(runtime.message || 'Tools have not been checked yet.')}</small></span></div><span class="runtime-tag ${runtime.available ? 'available' : ''}">${runtime.available ? 'Ready' : runtime.unused ? 'Not in use' : 'Setup needed'}</span></div>`;
   }).join(''));
   $('#install-runtime').disabled = pending || state.busy || isPreview;
   setContent('#install-runtime', `${icon(pending ? 'loader-circle' : 'download', pending ? 'spin' : '')} ${pending ? 'Preparing…' : isPreview ? 'Available in the desktop app' : 'Prepare device tools'}`);

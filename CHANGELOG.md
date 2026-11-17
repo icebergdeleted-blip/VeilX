@@ -25,6 +25,8 @@ Checked by the automated tests only; not yet tried with a phone.
   longer shows an internal error if Restore arrives at the same moment.
 - Wireless pairing errors no longer tell you to accept **Trust This Computer**.
 - Search and routing requests send the current VeilX version.
+- With the device setup on iPhone, VeilX no longer starts the Android tools, whose background
+  service kept running after quit.
 
 ## 0.3.0 (pre-release)
 

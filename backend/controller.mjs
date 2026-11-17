@@ -153,7 +153,11 @@ export class Controller extends EventEmitter {
       this.networkCheckedAt = this.now();
       this.state.network = await this.network().catch(() => ({wifi: false}));
     }
+    // A computer set up for an iPhone does not start the Android tools: their background
+    // service would keep running after VeilX quits. An unresolved Android record still gets them.
+    const androidUnused = this.state.preferences.phonePlatform === 'ios' && this.state.session?.platform !== 'android';
     const results = await Promise.all(Object.entries(this.adapters).map(async ([platform, adapter]) => {
+      if (platform === 'android' && androidUnused) return { platform, status: { available: false, unused: true, message: 'Not started: VeilX is set up for an iPhone. Change the device setup to use an Android phone.' }, devices: [] };
       try {
         const status = await adapter.status();
         const devices = status.available ? await adapter.list() : [];
