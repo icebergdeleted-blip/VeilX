@@ -134,6 +134,8 @@ test('failed update or late acknowledgement cannot hide transport loss, and a ne
   f.advance(1000); await f.c.tickRoute();
   assert.equal(f.c.state.session.status, 'waiting'); assert.equal(f.c.state.route.status, 'paused');
   f.replace(); await f.c.scanDevices();
+  assert.equal(f.c.state.route.status, 'paused', 'a phone that was live moments ago keeps its route and record');
+  f.advance(90_000); await f.c.scanDevices();
   assert.equal(f.c.state.route, null); assert.equal(f.c.state.session, null);
   assert.equal(f.calls.filter(c => c[0] === 'set').length, 1);
 });

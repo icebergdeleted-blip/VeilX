@@ -130,3 +130,26 @@ test('a live session, or a stale record for a different phone, still blocks a co
   await assert.rejects(f.c.setConnection('remote'), /Restore the current location/);
   assert.equal(f.c.state.preferences.connection, 'usb');
 });
+
+test('a saved remote address stays with its phone: pairing a different iPhone clears it', async () => {
+  const OTHER = '00008030-0000000000000001';
+  const other = { ...usbPhone, id: `ios:${OTHER}`, serial: OTHER, name: 'Alpha iPhone' };
+  const f = await controllerFixture({ remoteHost: '100.64.0.9', remoteUdid: UDID });
+  await f.c.pairRemote(usbPhone.id); // the same phone again keeps its address
+  assert.deepEqual(f.ios.remote, { host: '100.64.0.9', udid: UDID });
+
+  f.ios.list = async () => [other];
+  f.ios.enableWifi = async () => {};
+  await f.c.scanDevices();
+  const save = f.c.store.save;
+  f.c.store.save = async () => { throw new Error('Disk full'); };
+  await assert.rejects(f.c.connectWifi({ platform: 'ios', deviceId: other.id }), /Disk full/);
+  assert.deepEqual(f.ios.remote, { host: '100.64.0.9', udid: UDID }, 'an unsaved change is put back');
+  assert.equal(f.c.state.preferences.remoteUdid, UDID);
+
+  f.c.store.save = save;
+  await f.c.connectWifi({ platform: 'ios', deviceId: other.id });
+  assert.deepEqual(f.ios.remote, { host: null, udid: OTHER });
+  assert.equal(f.data.preferences.remoteHost, null);
+  await assert.rejects(f.c.setConnection('remote'), /Set up remote access/);
+});

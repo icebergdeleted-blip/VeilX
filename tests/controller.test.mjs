@@ -71,10 +71,11 @@ test('a different ready USB phone removes a stale prior-phone journal during sta
   assert.ok(!initCalls.includes('clear'), 'the newly connected phone must never receive a restore command for the old phone');
 });
 test('a different USB phone that needs setup also removes a stale prior-phone journal', async () => {
-  const { c, store, setDevices } = await fixture();
+  const { c, store, setDevices, advance } = await fixture();
   await c.applyLocation(point);
   c.state.session.status = 'unknown';
   await c.persist();
+  advance(90_000);
   setDevices([{ ...secondPhone, state: 'setup-required' }]);
   await c.scanDevices();
   assert.equal(c.state.session, null);
@@ -82,8 +83,9 @@ test('a different USB phone that needs setup also removes a stale prior-phone jo
   await c.prepareDevice(secondPhone.id);
 });
 test('failed persistence keeps the old recovery record and retry state', async () => {
-  const { c, calls, store, setDevices } = await fixture();
+  const { c, calls, store, setDevices, advance } = await fixture();
   await c.applyLocation(point);
+  advance(90_000);
   const sessionId = c.state.session.id;
   c.state.session.status = 'waiting';
   c.resumeSessionId = sessionId;
@@ -125,6 +127,7 @@ test('a different ready USB phone retires every unresolved status and cancels re
       c.retryAttempts = 3;
       await c.persist(); calls.length = 0;
 
+      advance(90_000);
       setDevices([secondPhone]);
       await c.scanDevices();
 
@@ -477,4 +480,46 @@ test('saved settings and places are published before the first device scan finis
   while (!finishScan) await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(events, ['loaded:dark:1', 'state:dark:1', 'scan started']);
   finishScan(); await starting;
+});
+test('a second phone does not erase the record of a phone that was live moments ago', async () => {
+  const { c, calls, store, setDevices, advance } = await fixture();
+  await c.applyLocation(point);
+  const sessionId = c.state.session.id; calls.length = 0;
+  // The live phone drops out while another phone stays plugged in.
+  setDevices([secondPhone]);
+  await c.scanDevices(); advance(7000); await c.scanDevices();
+  assert.equal(c.state.session.id, sessionId);
+  assert.equal(c.state.session.status, 'waiting');
+  assert.equal(store.data.session.id, sessionId);
+  assert.ok(!calls.some(call => call.startsWith('reset:')));
+  // It comes back: the same session resumes on the same phone.
+  setDevices([phone, secondPhone]);
+  await c.scanDevices();
+  assert.equal(c.state.session.status, 'active');
+  assert.equal(c.state.session.deviceId, phone.id);
+  // Gone for good: after 90 s without an answer the other phone is no longer locked out.
+  setDevices([secondPhone]);
+  await c.scanDevices(); advance(7000); await c.scanDevices();
+  advance(90_000); await c.scanDevices();
+  assert.equal(c.state.session, null);
+  assert.equal(store.data.session, null);
+});
+test('a rejected setting changes nothing, and an unsaved change is put back', async () => {
+  const { c, store } = await fixture();
+  const before = structuredClone(c.state.preferences);
+  await assert.rejects(c.updatePreferences({ routingUrl: 'http://127.0.0.1:5000/', restoreOnQuit: false, theme: 'neon' }), /appearance/i);
+  assert.deepEqual(c.state.preferences, before);
+  const save = store.save;
+  store.save = async () => { throw new Error('Disk full'); };
+  await assert.rejects(c.updatePreferences({ restoreOnQuit: false, remoteHost: '100.64.0.5' }), /Disk full/);
+  assert.deepEqual(c.state.preferences, before);
+  store.save = save;
+  await c.updatePreferences({ restoreOnQuit: false });
+  assert.equal(store.data.preferences.restoreOnQuit, false);
+  assert.equal(store.data.preferences.routingUrl, before.routingUrl);
+});
+test('a fixed location is remembered as a recent place', async () => {
+  const { c } = await fixture();
+  await c.applyLocation(point);
+  assert.deepEqual(c.state.recentPlaces.map(item => item.label), ['Equator']);
 });
