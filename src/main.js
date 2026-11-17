@@ -290,7 +290,9 @@ function renderTileStatus() {
     ? `${tileInfo.error ? `Offline tiles unavailable (${tileInfo.error}). ` : ''}Online map from OpenStreetMap. Needs internet.`
     : `Offline ${tileInfo.kind === 'mbtiles' ? 'MBTiles' : 'tile folder'}: ${tileInfo.name} · zoom ${tileInfo.minzoom}–${tileInfo.maxzoom}. No internet needed for the map.`;
 }
-useTiles();
+// The desktop app adds the map layer once it knows the saved tile source (see the end of this file),
+// so a computer set to offline tiles never asks the online map for anything.
+if (!api.getTileInfo) useTiles();
 const pinIcon = L.divIcon({ className: 'ghost-map-pin', html: '<div class="pin-halo"></div><div class="pin-head"><span></span></div>', iconSize: [48, 58], iconAnchor: [24, 54] });
 let marker = null;
 
@@ -675,7 +677,7 @@ $('#recenter-button').onclick = () => {
   else if (locationMode === 'route' && routeLine) fitRoute();
   else map.flyTo(selectedPlace ? [selectedPlace.latitude, selectedPlace.longitude] : [41.8827, -87.6233], selectedPlace ? Math.max(13, map.getZoom()) : 13, { duration: 0.6 });
 };
-$('#retry-map').onclick = () => { tileErrors = 0; $('#map-error').hidden = true; tiles.redraw(); };
+$('#retry-map').onclick = () => { tileErrors = 0; $('#map-error').hidden = true; tiles?.redraw(); };
 $('#offline-map-link').onclick = () => $('#settings-button').click();
 const chooseTiles = kind => async () => {
   if (!api.chooseTileSource) { notify('Offline maps are available in the desktop app.', true); return; }
@@ -861,10 +863,11 @@ api.getState().then(async next => {
   acceptState(next);
   if (api.getTileInfo) {
     const info = await api.getTileInfo().catch(() => null);
-    if (info) { useTiles(info); if (info.error) notify(`Offline map unavailable: ${info.error} Using the online map.`, true); }
+    useTiles(info || undefined);
+    if (info?.error) notify(`Offline map unavailable: ${info.error} Using the online map.`, true);
   }
   if (api.getRoute) {
     const planned = await api.getRoute();
     if (planned) { routePlan = planned; routeStops = planned.waypoints; drawRoute(); renderRoute(); paintIcons(); }
   }
-}).catch((error) => notify(`VeilX could not initialize: ${error.message}`, true));
+}).catch((error) => { if (!tiles) useTiles(); notify(`VeilX could not initialize: ${error.message}`, true); });

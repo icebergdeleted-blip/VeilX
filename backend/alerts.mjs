@@ -10,6 +10,8 @@ const label = connection => connection === 'remote' ? 'remote' : connection === 
 export class ConnectionAlerts {
   constructor() { this.previous = null; this.lost = null; this.suppressed = false; }
   suppress() { this.suppressed = true; }
+  /** Alert again after a quit that the user cancelled. Session changes seen meanwhile stay unreported. */
+  resume() { this.suppressed = false; }
 
   update(state) {
     const previous = this.previous, next = state?.session ?? null;

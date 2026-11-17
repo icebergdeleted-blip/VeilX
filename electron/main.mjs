@@ -17,6 +17,7 @@ import { ConnectionAlerts } from '../backend/alerts.mjs';
 import { PhoneControl } from '../backend/phone-control.mjs';
 import { findSelfDnsName } from '../backend/tailscale.mjs';
 import { normalizeTheme, windowColors } from '../backend/theme.mjs';
+import { prepareQuit } from '../backend/quit.mjs';
 
 const rootPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const devUrl = !app.isPackaged && process.env.GHOST_DEV_URL === 'http://127.0.0.1:5173' ? process.env.GHOST_DEV_URL : null;
@@ -197,8 +198,14 @@ async function boot() {
     try { const parsed = new URL(url); if (parsed.protocol === 'https:' && allowedExternal.has(parsed.hostname)) shell.openExternal(parsed.href); } catch {}
     return { action: 'deny' };
   });
-  window.webContents.on('render-process-gone', () => {
-    if (controller.state.session) controller.sessionEnded({ deviceId: controller.state.session.deviceId, retry: false, error: 'The interface stopped unexpectedly. Reopen VeilX and retry or restore the phone location.' });
+  let lastInterfaceReload = -Infinity;
+  window.webContents.on('render-process-gone', (_event, details) => {
+    if (controller.state.session) controller.sessionEnded({ deviceId: controller.state.session.deviceId, retry: false, error: 'The interface stopped unexpectedly. Retry or restore the phone location.' });
+    // Bring the window back instead of leaving it blank. At most once every 10 s, so a page that
+    // crashes on load cannot loop.
+    if (quitting || details?.reason === 'clean-exit' || window.isDestroyed() || Date.now() - lastInterfaceReload < 10_000) return;
+    lastInterfaceReload = Date.now();
+    window.loadURL(devUrl || 'ghost://app/index.html').catch(() => {});
   });
   window.once('ready-to-show', () => window.show());
   window.on('close', event => { if (!quitting) { event.preventDefault(); app.quit(); } });
@@ -212,7 +219,10 @@ async function boot() {
   if (devUrl) await window.loadURL(devUrl);
   else if (existsSync(path.join(dist, 'index.html'))) await window.loadURL('ghost://app/index.html');
   else throw new Error('Build the interface first with npm run build.');
-  try { await controller.init(); } finally { applyTheme(controller.state.preferences.theme); await applyTileSource(controller.state.preferences); }
+  // Apply the saved appearance and map source as soon as settings are read, not after the first device scan.
+  let tilesApplying = null;
+  controller.once('loaded', state => { applyTheme(state.preferences.theme); tilesApplying = applyTileSource(state.preferences); });
+  try { await controller.init(); } finally { applyTheme(controller.state.preferences.theme); await (tilesApplying ?? applyTileSource(controller.state.preferences)); }
   if (controller.state.preferences.phoneControlEnabled) {
     // Start only on Tailscale; if it is not up yet, Settings shows why and offers to retry.
     phoneControl.start().catch(() => {});
@@ -232,20 +242,15 @@ app.on('before-quit', event => {
 });
 
 async function finishQuit() {
-  connectionAlerts.suppress(); // Quitting ends sessions on purpose; never alert about it.
-  await phoneControl?.stop().catch(() => {});
-  if (controller.state.busy) {
-    await dialog.showMessageBox(window, { type: 'info', message: 'A device operation is still running.', detail: 'Wait for it to finish before closing VeilX.', buttons: ['Keep VeilX open'] });
-    return;
-  }
-  if (controller.state.session && controller.state.preferences.restoreOnQuit) {
-    try { await controller.stopLocation(); }
-    catch (error) {
+  const leaving = await prepareQuit({
+    controller, phoneControl, alerts: connectionAlerts,
+    showBusy: () => dialog.showMessageBox(window, { type: 'info', message: 'A device operation is still running.', detail: 'Wait for it to finish before closing VeilX.', buttons: ['Keep VeilX open'] }),
+    confirmUnrestored: async error => {
       const answer = await dialog.showMessageBox(window, { type: 'warning', message: 'The phone location has not been restored.', detail: `${error.message}\n\nReconnect your phone to restore it. Quitting now will keep this session marked for recovery.`, buttons: ['Keep VeilX open', 'Quit anyway'], defaultId: 0, cancelId: 0 });
-      if (answer.response !== 1) return;
-    }
-  }
-  if (controller.state.session) await controller.sessionEnded({ deviceId: controller.state.session.deviceId, retry: false, error: 'VeilX quit without confirming restoration. Reconnect this phone and choose Retry location or Restore.' });
+      return answer.response === 1;
+    },
+  });
+  if (!leaving) return;
   clearInterval(poll);
   wakeLock.release();
   tileSource.close();

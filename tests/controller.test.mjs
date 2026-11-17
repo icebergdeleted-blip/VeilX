@@ -462,3 +462,19 @@ test('idle USB handoff selects verified Wi-Fi without sending any location', asy
   assert.equal(c.state.session, null); assert.equal(c.state.devices[0].serial, wifiPhone.serial);
   assert.deepEqual(calls, ['persist']);
 });
+test('saved settings and places are published before the first device scan finishes', async () => {
+  const events = [];
+  const saved = { ...defaults(), savedPlaces: [{ id: 'home', latitude: 1, longitude: 2, label: 'Home' }] };
+  saved.preferences.theme = 'dark';
+  const store = { load: async () => structuredClone(saved), save: async () => {} };
+  let finishScan;
+  const adapter = { status: async () => { events.push('scan started'); await new Promise(resolve => { finishScan = resolve; }); return { available: true }; },
+    list: async () => [], dispose: async () => {} };
+  const c = new Controller({ adapters: { android: adapter }, store });
+  c.once('loaded', state => events.push(`loaded:${state.preferences.theme}:${state.savedPlaces.length}`));
+  c.on('state', state => events.push(`state:${state.preferences.theme ?? 'none'}:${state.savedPlaces.length}`));
+  const starting = c.init();
+  while (!finishScan) await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(events, ['loaded:dark:1', 'state:dark:1', 'scan started']);
+  finishScan(); await starting;
+});

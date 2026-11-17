@@ -44,6 +44,10 @@ export class Controller extends EventEmitter {
       await this.persist();
     }
     await this.restoreRoute();
+    // Saved settings, places and any recovery record are known now. Publish them before the
+    // first device scan, which can take seconds while the phone tools start.
+    this.emit('loaded', this.snapshot());
+    this.notify();
     return this.scanDevices();
   }
   applyRemote() {
