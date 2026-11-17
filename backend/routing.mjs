@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { place, routingUrl, speedMph, DEFAULT_ROUTING_URL, DEFAULT_SPEED_MPH } from './validation.mjs';
+import { USER_AGENT } from './version.mjs';
 
 export const ROUTE_SPEED_MPS = 45 * 1609.344 / 3600;
 /** Validated mph → m/s (m/s = mph × 0.44704). The default 45 mph is exactly 20.1168 m/s. */
@@ -67,7 +68,7 @@ export class Router {
     const url = `${this.baseUrl}route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false&alternatives=false&radiuses=${waypoints.map(() => 1000).join(';')}`;
     let data;
     try {
-      const response = await this.fetcher(url, { signal: AbortSignal.timeout(20000), headers: { 'User-Agent': 'VeilX/0.2', Accept: 'application/json' } });
+      const response = await this.fetcher(url, { signal: AbortSignal.timeout(20000), headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } });
       if (!response.ok) throw new Error(`Routing service returned HTTP ${response.status}.`);
       const body = await response.text();
       if (body.length > 8_000_000) throw new Error('Route is too large. Choose a shorter path.');

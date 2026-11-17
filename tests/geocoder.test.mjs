@@ -25,3 +25,13 @@ test('malformed coordinates from remote service are never offered as places', as
   const geocoder = new Geocoder({ intervalMs: 0, fetchImpl: async () => new Response(JSON.stringify({ features: [{ geometry: { coordinates: [0, 999] } }, { geometry: { coordinates: [0, 0] }, properties: {} }] })) });
   const places = await geocoder.search('Equator'); assert.equal(places.length, 1); assert.equal(places[0].longitude, 0);
 });
+test('search and routing identify VeilX by its current version', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { Router } = await import('../backend/routing.mjs');
+  const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const agents = [];
+  await new Geocoder({ intervalMs: 0, fetchImpl: async (_url, options) => { agents.push(options.headers['User-Agent']); return response(); } }).search('Chicago');
+  await new Router({ fetcher: async (_url, options) => { agents.push(options.headers['User-Agent']); return new Response(JSON.stringify({ code: 'Ok', routes: [{ geometry: { type: 'LineString', coordinates: [[0, 0], [0.001, 0]] } }] })); } })
+    .plan([{ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 0.001 }]);
+  assert.deepEqual(agents, [`VeilX/${version} (phone location simulator)`, `VeilX/${version} (phone location simulator)`]);
+});

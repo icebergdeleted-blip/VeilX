@@ -36,6 +36,8 @@ target phone application, test date and operator.
     `waiting`, or `error`: Ghost discards the old recovery record, cancels its retry,
     and allows Prepare/Set on the new phone without sending Restore to the old phone.
     Confirm the old phone is described as potentially retaining its simulated location.
+    Within 90 seconds of the old phone's last acknowledgement the record must stay
+    and the new phone must stay blocked.
 21. Repeat the replacement check while the old session is `active`, `applying`,
     `reconnecting`, or `stopping`: Ghost keeps that session and does not silently
     switch phones. Reconnect the same phone and confirm its unresolved record is kept.

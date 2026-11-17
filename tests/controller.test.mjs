@@ -71,10 +71,11 @@ test('a different ready USB phone removes a stale prior-phone journal during sta
   assert.ok(!initCalls.includes('clear'), 'the newly connected phone must never receive a restore command for the old phone');
 });
 test('a different USB phone that needs setup also removes a stale prior-phone journal', async () => {
-  const { c, store, setDevices } = await fixture();
+  const { c, store, setDevices, advance } = await fixture();
   await c.applyLocation(point);
   c.state.session.status = 'unknown';
   await c.persist();
+  advance(90_000);
   setDevices([{ ...secondPhone, state: 'setup-required' }]);
   await c.scanDevices();
   assert.equal(c.state.session, null);
@@ -82,8 +83,9 @@ test('a different USB phone that needs setup also removes a stale prior-phone jo
   await c.prepareDevice(secondPhone.id);
 });
 test('failed persistence keeps the old recovery record and retry state', async () => {
-  const { c, calls, store, setDevices } = await fixture();
+  const { c, calls, store, setDevices, advance } = await fixture();
   await c.applyLocation(point);
+  advance(90_000);
   const sessionId = c.state.session.id;
   c.state.session.status = 'waiting';
   c.resumeSessionId = sessionId;
@@ -125,6 +127,7 @@ test('a different ready USB phone retires every unresolved status and cancels re
       c.retryAttempts = 3;
       await c.persist(); calls.length = 0;
 
+      advance(90_000);
       setDevices([secondPhone]);
       await c.scanDevices();
 
@@ -461,4 +464,110 @@ test('idle USB handoff selects verified Wi-Fi without sending any location', asy
   await c.switchToWifi(phone.id);
   assert.equal(c.state.session, null); assert.equal(c.state.devices[0].serial, wifiPhone.serial);
   assert.deepEqual(calls, ['persist']);
+});
+test('saved settings and places are published before the first device scan finishes', async () => {
+  const events = [];
+  const saved = { ...defaults(), savedPlaces: [{ id: 'home', latitude: 1, longitude: 2, label: 'Home' }] };
+  saved.preferences.theme = 'dark';
+  const store = { load: async () => structuredClone(saved), save: async () => {} };
+  let finishScan;
+  const adapter = { status: async () => { events.push('scan started'); await new Promise(resolve => { finishScan = resolve; }); return { available: true }; },
+    list: async () => [], dispose: async () => {} };
+  const c = new Controller({ adapters: { android: adapter }, store });
+  c.once('loaded', state => events.push(`loaded:${state.preferences.theme}:${state.savedPlaces.length}`));
+  c.on('state', state => events.push(`state:${state.preferences.theme ?? 'none'}:${state.savedPlaces.length}`));
+  const starting = c.init();
+  while (!finishScan) await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(events, ['loaded:dark:1', 'state:dark:1', 'scan started']);
+  finishScan(); await starting;
+});
+test('a second phone does not erase the record of a phone that was live moments ago', async () => {
+  const { c, calls, store, setDevices, advance } = await fixture();
+  await c.applyLocation(point);
+  const sessionId = c.state.session.id; calls.length = 0;
+  // The live phone drops out while another phone stays plugged in.
+  setDevices([secondPhone]);
+  await c.scanDevices(); advance(7000); await c.scanDevices();
+  assert.equal(c.state.session.id, sessionId);
+  assert.equal(c.state.session.status, 'waiting');
+  assert.equal(store.data.session.id, sessionId);
+  assert.ok(!calls.some(call => call.startsWith('reset:')));
+  // It comes back: the same session resumes on the same phone.
+  setDevices([phone, secondPhone]);
+  await c.scanDevices();
+  assert.equal(c.state.session.status, 'active');
+  assert.equal(c.state.session.deviceId, phone.id);
+  // Gone for good: after 90 s without an answer the other phone is no longer locked out.
+  setDevices([secondPhone]);
+  await c.scanDevices(); advance(7000); await c.scanDevices();
+  advance(90_000); await c.scanDevices();
+  assert.equal(c.state.session, null);
+  assert.equal(store.data.session, null);
+});
+test('a rejected setting changes nothing, and an unsaved change is put back', async () => {
+  const { c, store } = await fixture();
+  const before = structuredClone(c.state.preferences);
+  await assert.rejects(c.updatePreferences({ routingUrl: 'http://127.0.0.1:5000/', restoreOnQuit: false, theme: 'neon' }), /appearance/i);
+  assert.deepEqual(c.state.preferences, before);
+  const save = store.save;
+  store.save = async () => { throw new Error('Disk full'); };
+  await assert.rejects(c.updatePreferences({ restoreOnQuit: false, remoteHost: '100.64.0.5' }), /Disk full/);
+  assert.deepEqual(c.state.preferences, before);
+  store.save = save;
+  await c.updatePreferences({ restoreOnQuit: false });
+  assert.equal(store.data.preferences.restoreOnQuit, false);
+  assert.equal(store.data.preferences.routingUrl, before.routingUrl);
+});
+test('a fixed location is remembered as a recent place', async () => {
+  const { c } = await fixture();
+  await c.applyLocation(point);
+  assert.deepEqual(c.state.recentPlaces.map(item => item.label), ['Equator']);
+});
+test('the computer Wi-Fi check runs only while a live USB session could be offered Wi-Fi', async () => {
+  let checks = 0, timestamp = 0, devices = [structuredClone(phone)];
+  const data = defaults();
+  const store = { load: async () => structuredClone(data), save: async () => {} };
+  const adapter = { status: async () => ({ available: true }), list: async () => devices, set: async () => ({}), clear: async () => ({}), dispose: async () => {} };
+  const c = new Controller({ adapters: { android: adapter }, store, now: () => timestamp, network: async () => { checks++; return { wifi: true }; } });
+  await c.init(); timestamp += 60_000; await c.scanDevices();
+  assert.equal(checks, 0, 'no session: nothing to offer');
+  await c.applyLocation(point); await c.scanDevices();
+  assert.equal(checks, 1); assert.deepEqual(c.state.network, { wifi: true });
+  timestamp += 5000; await c.scanDevices(); assert.equal(checks, 1, 'at most every 15 s');
+  timestamp += 15_000; await c.scanDevices(); assert.equal(checks, 2);
+  await c.stopLocation(); timestamp += 60_000; await c.scanDevices();
+  assert.equal(checks, 2, 'restored: no more checks');
+});
+test('Refresh and a session waiting to reconnect skip the wait for a silent phone', async () => {
+  const { c, adapter, disconnect, advance } = await fixture();
+  let probes = 0; adapter.probeNow = () => { probes++; };
+  await c.scanDevices(); assert.equal(probes, 0, 'ordinary polling respects the wait');
+  await c.scanDevices({ force: true }); assert.equal(probes, 1);
+  await c.applyLocation(point); disconnect(); await c.scanDevices(); advance(7000); await c.scanDevices();
+  assert.equal(c.state.session.status, 'waiting');
+  probes = 0; await c.scanDevices(); assert.equal(probes, 1);
+  await assert.rejects(c.stopLocation()); // Restore cancels automatic reconnect
+  probes = 0; await c.scanDevices(); assert.equal(probes, 0);
+});
+test('an iPhone setup does not start the Android tools, unless an Android record is unresolved', async () => {
+  const used = [];
+  const make = name => ({ status: async () => { used.push(name); return { available: true }; }, list: async () => [], dispose: async () => {} });
+  const build = async saved => {
+    const store = { load: async () => structuredClone(saved), save: async () => {} };
+    const c = new Controller({ adapters: { ios: make('ios'), android: make('android') }, store });
+    used.length = 0; await c.init(); return c;
+  };
+  const saved = defaults();
+  await build(saved);
+  assert.deepEqual(used.sort(), ['android', 'ios'], 'before setup is chosen, both are checked');
+  saved.preferences.phonePlatform = 'ios';
+  const c = await build(saved);
+  assert.deepEqual(used, ['ios']);
+  assert.equal(c.state.runtime.android.available, false);
+  assert.equal(c.state.runtime.android.unused, true);
+  await build({ ...saved, session: { id: 's', deviceId: 'android:USB123', serial: 'USB123', platform: 'android', latitude: 1, longitude: 2, status: 'active' } });
+  assert.deepEqual(used.sort(), ['android', 'ios'], 'an Android phone that may still be simulating can be restored');
+  saved.preferences.phonePlatform = 'android';
+  await build(saved);
+  assert.deepEqual(used.sort(), ['android', 'ios']);
 });

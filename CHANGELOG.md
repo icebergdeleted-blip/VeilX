@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+Checked by the automated tests only; not yet tried with a phone.
+
+- Quit: choosing **Keep VeilX open** (or quitting while a device operation runs) no longer
+  leaves phone control switched off and connection alerts muted.
+- Startup: the saved appearance, saved places and map source apply as soon as settings are
+  read, instead of after the first device scan. With offline tiles selected, the map no longer
+  asks the online map for tiles while starting.
+- If the interface process crashes, the window reloads (at most once every 10 seconds). A
+  session is still marked for Retry or Restore.
+- A phone that acknowledged a location in the last 90 seconds keeps its recovery record and
+  route when another phone is connected. Before, one dropped scan with a second phone
+  attached discarded them.
+- Settings: a rejected or unsaved change no longer half-applies. A saved remote address is
+  cleared when wireless access is set up for a different iPhone, because it belonged to the
+  previous one.
+- Remote: an iPhone that does not answer is asked less often (up to every 30 seconds), so the
+  app stays responsive. **Refresh** and a session waiting to reconnect ask at once.
+- Phone control keeps trying to start until Tailscale is connected.
+- The computer's Wi-Fi adapter is checked only while a live USB session could be offered Wi-Fi.
+- Route starts are no longer stored as recent places. A route paused for falling behind no
+  longer shows an internal error if Restore arrives at the same moment.
+- Wireless pairing errors no longer tell you to accept **Trust This Computer**.
+- Search and routing requests send the current VeilX version.
+- With the device setup on iPhone, VeilX no longer starts the Android tools, whose background
+  service kept running after quit.
+
 ## 0.3.0 (pre-release)
 
 - Phone page: the pairing code box and Pair button stay on screen on narrow phones.

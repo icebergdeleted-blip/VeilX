@@ -8,6 +8,9 @@ import { findTailscaleApplePeers } from './tailscale.mjs';
 const REPLACEABLE_SESSION_STATUSES = new Set(['unknown', 'waiting', 'error']);
 const USABLE_REPLACEMENT_STATES = new Set(['ready', 'setup-required']);
 const ROUTE_CHECKPOINT_MS = 5000;
+// A phone that answered this recently may only have dropped for a moment, and can still be
+// simulating. Its record is not given up for another phone until this has passed.
+const RECENTLY_LIVE_MS = 90_000;
 const CONNECTIONS = ['usb', 'wifi', 'remote'];
 const runningMessage = route => `Following the road at ${route.speedMph} mph. Sending a location every second.`;
 
@@ -44,6 +47,10 @@ export class Controller extends EventEmitter {
       await this.persist();
     }
     await this.restoreRoute();
+    // Saved settings, places and any recovery record are known now. Publish them before the
+    // first device scan, which can take seconds while the phone tools start.
+    this.emit('loaded', this.snapshot());
+    this.notify();
     return this.scanDevices();
   }
   applyRemote() {
@@ -58,11 +65,20 @@ export class Controller extends EventEmitter {
       const device = this.device(id);
       if (device.platform !== 'ios' || device.connection !== 'usb') throw new Error('Connect the iPhone by USB to set up remote access.');
       await this.adapters.ios.pairRemote(device);
-      const previous = this.state.preferences.remoteUdid;
-      this.state.preferences.remoteUdid = device.serial;
-      try { await this.persist(); } catch (error) { this.state.preferences.remoteUdid = previous; throw error; }
-      this.applyRemote();
+      await this.adoptRemotePhone(device.serial);
     });
+  }
+  /**
+   * Remember which iPhone the network (Wi-Fi and Remote) pairing belongs to. A saved remote
+   * address belongs to one phone, so it is cleared when a different phone takes over.
+   */
+  async adoptRemotePhone(serial) {
+    const { remoteUdid = null, remoteHost = null } = this.state.preferences;
+    this.state.preferences.remoteUdid = serial;
+    if (remoteUdid && remoteUdid !== serial) this.state.preferences.remoteHost = null;
+    try { await this.persist(); }
+    catch (error) { Object.assign(this.state.preferences, { remoteUdid, remoteHost }); throw error; }
+    this.applyRemote();
   }
   routeSpeed() { return this.state.preferences.routeSpeedMph ?? DEFAULT_SPEED_MPH; }
   /** Bring back a saved route after a restart, always paused; Resume is manual. */
@@ -116,10 +132,13 @@ export class Controller extends EventEmitter {
     finally { this.state.busy = false; this.notify(); }
     return this.snapshot();
   }
-  async scanDevices() {
+  /** `force`: the user asked (Refresh), so skip any wait an adapter applies to a phone that is not answering. */
+  async scanDevices({ force = false } = {}) {
     if (this.closing) return this.snapshot();
     if (this.scanning) return this.scanning;
     if (this.state.busy) return this.snapshot();
+    // A session waiting to reconnect must not wait either: the phone drops the location about a minute after the link.
+    if (force || this.canResume()) for (const adapter of Object.values(this.adapters)) adapter.probeNow?.();
     this.scanning = this.scan();
     try { await this.scanning; } finally { this.scanning = null; }
     await this.reconnectIfNeeded();
@@ -127,11 +146,18 @@ export class Controller extends EventEmitter {
   }
   async scan() {
     const previousDevices = this.state.devices;
-    if (this.now() - this.networkCheckedAt >= 15000) {
+    // The computer's Wi-Fi state only feeds the "Switch to Wi-Fi?" offer, which needs a live USB session.
+    const session = this.state.session;
+    const wifiOfferPossible = (this.state.preferences.connection || 'usb') === 'usb' && session?.status === 'active' && (session.connection || 'usb') === 'usb';
+    if (wifiOfferPossible && this.now() - this.networkCheckedAt >= 15000) {
       this.networkCheckedAt = this.now();
       this.state.network = await this.network().catch(() => ({wifi: false}));
     }
+    // A computer set up for an iPhone does not start the Android tools: their background
+    // service would keep running after VeilX quits. An unresolved Android record still gets them.
+    const androidUnused = this.state.preferences.phonePlatform === 'ios' && this.state.session?.platform !== 'android';
     const results = await Promise.all(Object.entries(this.adapters).map(async ([platform, adapter]) => {
+      if (platform === 'android' && androidUnused) return { platform, status: { available: false, unused: true, message: 'Not started: VeilX is set up for an iPhone. Change the device setup to use an Android phone.' }, devices: [] };
       try {
         const status = await adapter.status();
         const devices = status.available ? await adapter.list() : [];
@@ -177,6 +203,8 @@ export class Controller extends EventEmitter {
     const replacement = this.state.devices.find(device => device.id !== previous.deviceId &&
       (previous.platform === 'ios' || (previous.connection || 'usb') === 'usb' || previous.hardwareId) && CONNECTIONS.includes(device.connection) && USABLE_REPLACEMENT_STATES.has(device.state));
     if (!replacement) return false;
+    const lastConfirmed = Date.parse(previous.lastRefreshAt || '');
+    if (Number.isFinite(lastConfirmed) && this.now() - lastConfirmed < RECENTLY_LIVE_MS) return false;
 
     // A recovery record from another phone must not lock the newly connected
     // phone out of Set/Prepare. Persist its removal before dropping transport
@@ -342,8 +370,7 @@ export class Controller extends EventEmitter {
         await this.adapters.ios.enableWifi(device);
         // iOS 27 Wi-Fi tunnels use RemotePairing; create this computer's record while on USB.
         await this.adapters.ios.pairRemote(device);
-        this.state.preferences.remoteUdid = device.serial; this.applyRemote();
-        await this.persist();
+        await this.adoptRemotePhone(device.serial);
       } else if (input?.platform === 'android') {
         await this.adapters.android.connectWifi(input);
       } else throw new Error('Choose iPhone or Android.');
@@ -392,7 +419,8 @@ export class Controller extends EventEmitter {
         if (this.closing) throw new Error('VeilX is closing; this session must be checked when it reopens.');
         if (['unknown', 'waiting'].includes(current.status)) throw new Error(current.message);
         this.confirmActive(current, result);
-        this.state.recentPlaces = [{ id: randomUUID(), ...point, usedAt: new Date().toISOString() }, ...this.state.recentPlaces.filter(p => p.latitude !== point.latitude || p.longitude !== point.longitude)].slice(0, 12);
+        // A route start is a point on the road labelled "Route to …", not a place the user chose.
+        if (!route) this.state.recentPlaces = [{ id: randomUUID(), ...point, usedAt: new Date().toISOString() }, ...this.state.recentPlaces.filter(p => p.latitude !== point.latitude || p.longitude !== point.longitude)].slice(0, 12);
         await this.persist(); return this.snapshot();
       } catch (error) {
         this.pauseRouteMotion('Could not start the route. Reconnect this phone, then resume.');
@@ -593,7 +621,12 @@ export class Controller extends EventEmitter {
     }
     const started = this.clock(), elapsed = started - this.routeStepAt;
     if (elapsed < 1000) { this.scheduleRouteTick(1000 - elapsed); return; }
-    if (elapsed > 2000) { await this.pauseRoute(); this.state.route.message = 'Updates fell behind. Resume when the computer and phone connection are ready.'; this.notify(); return; }
+    if (elapsed > 2000) {
+      await this.pauseRoute();
+      // Restore may have removed the route while the pause was being saved.
+      if (this.state.route) this.state.route.message = 'Updates fell behind. Resume when the computer and phone connection are ready.';
+      this.notify(); return;
+    }
     this.routeStepAt = started;
     const operation = async () => {
       try {
@@ -654,53 +687,65 @@ export class Controller extends EventEmitter {
   async updatePreferences(input) {
     if (!input || typeof input !== 'object') throw new Error('Invalid preferences.');
     if (input.routeSpeedMph != null) speedMph(input.routeSpeedMph); // validate before changing anything
-    if (input.routingUrl != null) this.state.preferences.routingUrl = routingUrl(text(input.routingUrl));
+    // Work on a copy: a rejected field must leave every other setting as it was.
+    const previous = this.state.preferences, next = { ...previous };
+    if (input.routingUrl != null) next.routingUrl = routingUrl(text(input.routingUrl));
     if (input.phoneControlEnabled != null) {
       if (typeof input.phoneControlEnabled !== 'boolean') throw new Error('Invalid phone control preference.');
-      this.state.preferences.phoneControlEnabled = input.phoneControlEnabled;
+      next.phoneControlEnabled = input.phoneControlEnabled;
     }
     if (input.remoteHost !== undefined) {
       if (input.remoteHost === null || input.remoteHost === '') {
         if (this.state.preferences.connection === 'remote' && this.state.session) throw new Error('Restore the current location before clearing the remote address.');
-        this.state.preferences.remoteHost = null;
+        next.remoteHost = null;
       } else {
         const host = remoteHost(input.remoteHost);
-        if (this.state.preferences.connection === 'remote' && this.state.session && host !== this.state.preferences.remoteHost) {
+        if (this.state.preferences.connection === 'remote' && this.state.session && host !== previous.remoteHost) {
           throw new Error('Restore the current location before changing the remote address.');
         }
-        this.state.preferences.remoteHost = host;
+        next.remoteHost = host;
       }
-      this.applyRemote();
     }
     if (input.tileSource != null) {
       if (!['online', 'mbtiles', 'folder'].includes(input.tileSource)) throw new Error('Invalid map tile source.');
       if (input.tileSource !== 'online' && (typeof input.tilePath !== 'string' || !input.tilePath || input.tilePath.length > 1024)) throw new Error('Choose an offline tile file or folder.');
-      this.state.preferences.tileSource = input.tileSource;
-      this.state.preferences.tilePath = input.tileSource === 'online' ? null : input.tilePath;
+      next.tileSource = input.tileSource;
+      next.tilePath = input.tileSource === 'online' ? null : input.tilePath;
     }
     if (input.theme != null) {
       if (!THEMES.includes(input.theme)) throw new Error('Invalid appearance. Choose System, Light or Dark.');
-      this.state.preferences.theme = input.theme;
+      next.theme = input.theme;
     }
     if (input.restoreOnQuit != null) {
       if (typeof input.restoreOnQuit !== 'boolean') throw new Error('Invalid quit preference.');
-      this.state.preferences.restoreOnQuit = input.restoreOnQuit;
+      next.restoreOnQuit = input.restoreOnQuit;
     }
-    if (input.geocoderUrl != null) this.state.preferences.geocoderUrl = geocoderUrl(text(input.geocoderUrl));
+    if (input.geocoderUrl != null) next.geocoderUrl = geocoderUrl(text(input.geocoderUrl));
     if (input.onboardingComplete != null) {
       if (typeof input.onboardingComplete !== 'boolean') throw new Error('Invalid onboarding preference.');
-      this.state.preferences.onboardingComplete = input.onboardingComplete;
+      next.onboardingComplete = input.onboardingComplete;
     }
     if (input.hostPlatform != null) {
       if (!['mac', 'windows'].includes(input.hostPlatform)) throw new Error('Invalid computer platform.');
-      this.state.preferences.hostPlatform = input.hostPlatform;
+      next.hostPlatform = input.hostPlatform;
     }
     if (input.phonePlatform != null) {
       if (!['ios', 'android'].includes(input.phonePlatform)) throw new Error('Invalid phone platform.');
-      this.state.preferences.phonePlatform = input.phonePlatform;
+      next.phonePlatform = input.phonePlatform;
     }
-    if (input.routeSpeedMph != null) return this.setRouteSpeed(input.routeSpeedMph);
-    await this.persist(); this.notify(); return this.snapshot();
+    const changed = Object.keys(next).filter(key => next[key] !== previous[key]);
+    if (input.routeSpeedMph != null) changed.push('routeSpeedMph');
+    this.state.preferences = next;
+    this.applyRemote();
+    try {
+      if (input.routeSpeedMph != null) return await this.setRouteSpeed(input.routeSpeedMph);
+      await this.persist();
+    } catch (error) {
+      // Not saved: put back only what this call changed.
+      for (const key of changed) this.state.preferences[key] = previous[key];
+      this.applyRemote(); throw error;
+    }
+    this.notify(); return this.snapshot();
   }
   async dispose(options) {
     this.closing = true; this.resumeSessionId = null;

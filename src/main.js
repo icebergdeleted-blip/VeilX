@@ -290,7 +290,9 @@ function renderTileStatus() {
     ? `${tileInfo.error ? `Offline tiles unavailable (${tileInfo.error}). ` : ''}Online map from OpenStreetMap. Needs internet.`
     : `Offline ${tileInfo.kind === 'mbtiles' ? 'MBTiles' : 'tile folder'}: ${tileInfo.name} · zoom ${tileInfo.minzoom}–${tileInfo.maxzoom}. No internet needed for the map.`;
 }
-useTiles();
+// The desktop app adds the map layer once it knows the saved tile source (see the end of this file),
+// so a computer set to offline tiles never asks the online map for anything.
+if (!api.getTileInfo) useTiles();
 const pinIcon = L.divIcon({ className: 'ghost-map-pin', html: '<div class="pin-halo"></div><div class="pin-head"><span></span></div>', iconSize: [48, 58], iconAnchor: [24, 54] });
 let marker = null;
 
@@ -517,11 +519,14 @@ function renderSession() {
 function renderRuntime() {
   setContent('#runtime-status', ['ios', 'android'].map((platform) => {
     const runtime = state.runtime?.[platform] || {};
-    return `<div class="runtime-row"><div>${icon('smartphone')}<span><strong>${platformName(platform)}</strong><small>${esc(runtime.message || 'Tools have not been checked yet.')}</small></span></div><span class="runtime-tag ${runtime.available ? 'available' : ''}">${runtime.available ? 'Ready' : 'Setup needed'}</span></div>`;
+    return `<div class="runtime-row"><div>${icon('smartphone')}<span><strong>${platformName(platform)}</strong><small>${esc(runtime.message || 'Tools have not been checked yet.')}</small></span></div><span class="runtime-tag ${runtime.available ? 'available' : ''}">${runtime.available ? 'Ready' : runtime.unused ? 'Not in use' : 'Setup needed'}</span></div>`;
   }).join(''));
   $('#install-runtime').disabled = pending || state.busy || isPreview;
   setContent('#install-runtime', `${icon(pending ? 'loader-circle' : 'download', pending ? 'spin' : '')} ${pending ? 'Preparing…' : isPreview ? 'Available in the desktop app' : 'Prepare device tools'}`);
-  if (document.activeElement !== $('#restore-preference')) $('#restore-preference').checked = state.preferences.restoreOnQuit !== false;
+  // While another action runs, a click here would be dropped and leave the switch showing the wrong state.
+  $('#restore-preference').disabled = pending;
+  for (const button of document.querySelectorAll('[data-theme-choice]')) button.disabled = pending;
+  if (!pending && document.activeElement !== $('#restore-preference')) $('#restore-preference').checked = state.preferences.restoreOnQuit !== false;
   applyThemeChoice(state.preferences.theme);
   const selectedGuide = state.preferences.hostPlatform && state.preferences.phonePlatform ? guideFor(state.preferences.hostPlatform, state.preferences.phonePlatform) : null;
   $('#settings-configuration').textContent = selectedGuide?.title || 'No setup selected';
@@ -675,7 +680,7 @@ $('#recenter-button').onclick = () => {
   else if (locationMode === 'route' && routeLine) fitRoute();
   else map.flyTo(selectedPlace ? [selectedPlace.latitude, selectedPlace.longitude] : [41.8827, -87.6233], selectedPlace ? Math.max(13, map.getZoom()) : 13, { duration: 0.6 });
 };
-$('#retry-map').onclick = () => { tileErrors = 0; $('#map-error').hidden = true; tiles.redraw(); };
+$('#retry-map').onclick = () => { tileErrors = 0; $('#map-error').hidden = true; tiles?.redraw(); };
 $('#offline-map-link').onclick = () => $('#settings-button').click();
 const chooseTiles = kind => async () => {
   if (!api.chooseTileSource) { notify('Offline maps are available in the desktop app.', true); return; }
@@ -713,7 +718,7 @@ function renderPhoneControl(status = phoneControlStatus) {
     $('#phone-control-qr').dataset.url = pairing.url;
   }
   $('#phone-control-info').textContent = on ? `${phoneControlStatus.phones || 0} phone${phoneControlStatus.phones === 1 ? '' : 's'} paired. Commands from the phone work like the buttons here.` : '';
-  $('#phone-control-error').textContent = state.preferences.phoneControlEnabled && !on ? (phoneControlStatus.error || 'Phone control is waiting for Tailscale. Turn it off and on again once Tailscale is connected.') : '';
+  $('#phone-control-error').textContent = state.preferences.phoneControlEnabled && !on ? `${phoneControlStatus.error || 'Phone control is waiting for Tailscale.'} VeilX keeps trying.` : '';
 }
 async function phoneControlAction(action, success) {
   const status = await runOperation(() => api.phoneControl(action), success);
@@ -724,7 +729,7 @@ $('#phone-control-toggle').onchange = () => phoneControlAction($('#phone-control
 $('#phone-control-pair').onclick = () => phoneControlAction('pair');
 $('#phone-control-revoke').onclick = () => phoneControlAction('revoke', 'All phones were signed out.');
 $('#phone-control-copy').onclick = () => { navigator.clipboard?.writeText(phoneControlStatus.url || '').then(() => notify('Address copied.'), () => {}); };
-if (api.onPhoneControl) api.onPhoneControl(status => { renderPhoneControl(status); notify('A phone was paired with VeilX.'); });
+if (api.onPhoneControl) api.onPhoneControl(status => { renderPhoneControl(status); if (status?.event === 'paired') notify('A phone was paired with VeilX.'); });
 $('#settings-button').onclick = () => {
   if (api.phoneControl && !isPreview) api.phoneControl('status').then(renderPhoneControl, () => {}); $('#provider-url').value = state.preferences.geocoderUrl || 'https://photon.komoot.io/api/'; $('#routing-url').value = state.preferences.routingUrl || 'https://router.project-osrm.org/'; renderTileStatus(); renderRuntime(); paintIcons(); $('#settings-dialog').showModal(); };
 $('#scan-button').onclick = () => runOperation(() => api.scanDevices(), 'Device list refreshed.');
@@ -861,10 +866,11 @@ api.getState().then(async next => {
   acceptState(next);
   if (api.getTileInfo) {
     const info = await api.getTileInfo().catch(() => null);
-    if (info) { useTiles(info); if (info.error) notify(`Offline map unavailable: ${info.error} Using the online map.`, true); }
+    useTiles(info || undefined);
+    if (info?.error) notify(`Offline map unavailable: ${info.error} Using the online map.`, true);
   }
   if (api.getRoute) {
     const planned = await api.getRoute();
     if (planned) { routePlan = planned; routeStops = planned.waypoints; drawRoute(); renderRoute(); paintIcons(); }
   }
-}).catch((error) => notify(`VeilX could not initialize: ${error.message}`, true));
+}).catch((error) => { if (!tiles) useTiles(); notify(`VeilX could not initialize: ${error.message}`, true); });
