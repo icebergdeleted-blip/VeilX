@@ -523,7 +523,10 @@ function renderRuntime() {
   }).join(''));
   $('#install-runtime').disabled = pending || state.busy || isPreview;
   setContent('#install-runtime', `${icon(pending ? 'loader-circle' : 'download', pending ? 'spin' : '')} ${pending ? 'Preparing…' : isPreview ? 'Available in the desktop app' : 'Prepare device tools'}`);
-  if (document.activeElement !== $('#restore-preference')) $('#restore-preference').checked = state.preferences.restoreOnQuit !== false;
+  // While another action runs, a click here would be dropped and leave the switch showing the wrong state.
+  $('#restore-preference').disabled = pending;
+  for (const button of document.querySelectorAll('[data-theme-choice]')) button.disabled = pending;
+  if (!pending && document.activeElement !== $('#restore-preference')) $('#restore-preference').checked = state.preferences.restoreOnQuit !== false;
   applyThemeChoice(state.preferences.theme);
   const selectedGuide = state.preferences.hostPlatform && state.preferences.phonePlatform ? guideFor(state.preferences.hostPlatform, state.preferences.phonePlatform) : null;
   $('#settings-configuration').textContent = selectedGuide?.title || 'No setup selected';

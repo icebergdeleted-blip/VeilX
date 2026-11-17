@@ -43,11 +43,15 @@ def emit(value):
     PROTOCOL_OUT.flush()
 
 
-def explain(error):
+def explain(error, connection="usb"):
     name = type(error).__name__
     if "Usbmuxd" in name:
         return "Apple USB services are unavailable. On Windows, install iTunes and reconnect the cable."
     if any(word in name for word in ("Pair", "Passcode", "UserDenied", "Password")):
+        if connection in ("wifi", "remote"):
+            # No Trust prompt exists over the network; the pairing was made over USB.
+            return (f"{name}: the iPhone did not accept this computer's wireless pairing. "
+                    "Unlock the iPhone. If this continues, connect it by USB and set up wireless access again.")
         return "Unlock the iPhone and accept Trust This Computer, then try again."
     if "DeveloperMode" in name:
         return "Enable Developer Mode in iPhone Settings → Privacy & Security, restart, and confirm it."
@@ -378,7 +382,7 @@ class Bridge:
                     acknowledged = await self.apply_target(session, session["target"])
                     emit({"event": "location-refreshed", **acknowledged})
                 except Exception as error:
-                    await self.fail_session(session, f"iPhone location refresh failed ({explain(error)}). Location state is unknown; reconnect to retry.")
+                    await self.fail_session(session, f"iPhone location refresh failed ({explain(error, session.get('connection', 'usb'))}). Location state is unknown; reconnect to retry.")
                     return
 
     async def close_session(self, clear):
@@ -512,7 +516,8 @@ async def main():
                 if method == "shutdown":
                     break
             except Exception as error:
-                emit({"id": request.get("id"), "ok": False, "error": explain(error)})
+                params = request.get("params") if isinstance(request.get("params"), dict) else {}
+                emit({"id": request.get("id"), "ok": False, "error": explain(error, params.get("connection", "usb"))})
     finally:
         with suppress(Exception):
             await asyncio.wait_for(bridge.close_session(clear=True), 8)

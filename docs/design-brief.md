@@ -32,7 +32,8 @@ One shared Electron interface handles the map, search, device selection, setup g
 - One selected USB phone and one unresolved session at a time. If an `unknown`,
   `waiting`, or `error` record belongs to a different phone and another usable USB
   phone appears, discard the old record automatically so the new phone can be used.
-  Keep `active`, `applying`, `reconnecting`, and `stopping` sessions protected.
+  Keep `active`, `applying`, `reconnecting`, and `stopping` sessions protected, and
+  any record whose phone acknowledged a location in the last 90 seconds.
 - Selecting a pin changes the preview; an explicit Set location action changes the phone.
 - USB replug can automatically resume the same phone and applied target while the same Ghost process remains open. Same-phone manual retry is available after a connection failure; restarting Ghost requires manual Retry or Restore.
 - Restore cancels automatic reconnection, including when the phone is absent, and waits for any in-progress recovery before sending clear. A disconnected phone must reconnect for clearing to succeed.

@@ -324,6 +324,16 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(RuntimeError, "owns the USB session"):
                 await bridge.dispatch("enable-wifi", {"udid": "another-phone"})
 
+    async def test_pairing_errors_name_the_trust_prompt_only_over_usb(self):
+        class PairingError(Exception):
+            pass
+
+        self.assertIn("Trust This Computer", bridge_module.explain(PairingError()))
+        for connection in ("wifi", "remote"):
+            message = bridge_module.explain(PairingError(), connection)
+            self.assertNotIn("Trust This Computer", message)
+            self.assertIn("set up wireless access again", message)
+        self.assertIn("ValueError: bad", bridge_module.explain(ValueError("bad"), "remote"))
 
 
 if __name__ == "__main__":

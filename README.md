@@ -130,7 +130,9 @@ different phone and VeilX discovers another usable USB phone, VeilX automaticall
 discards the old record so the newly connected phone can be prepared or have a
 location set.
 Active, applying, reconnecting, and stopping sessions remain protected from this
-automatic cleanup.
+automatic cleanup. So does the record of a phone that acknowledged a location in the
+last 90 seconds: it may only have dropped for a moment, so its record and route are
+kept and the other phone stays blocked until then.
 
 On iPhone, the sidecar reasserts the selected coordinates on a one-second loop.
 Each DVT location command is awaited before VeilX records its acknowledgement.
